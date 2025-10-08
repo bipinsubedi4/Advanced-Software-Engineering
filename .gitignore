@@ -1,4 +1,18 @@
-/node_modules
+# Node
+node_modules/
+dist/
+build/
+
+# Prisma local DB
+*.db
+*.db-journal
+
+# Environment files
 .env
-/dist
-/dev.db
+.env.local
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
