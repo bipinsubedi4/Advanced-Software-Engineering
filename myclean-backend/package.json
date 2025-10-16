@@ -7,10 +7,11 @@
   "scripts": {
     "dev": "tsx src/index.ts",
     "build": "tsc",
-    "start": "node dist/index.js",
+    "start": "tsx src/index.ts",
     "prisma:generate": "prisma generate",
-    "prisma:migrate": "prisma migrate dev",
-    "seed": "tsx prisma/seed.ts"
+    "prisma:migrate": "prisma migrate deploy",
+    "seed": "tsx prisma/seed.ts",
+    "postinstall": "prisma generate"
   },
   "dependencies": {
     "@prisma/client": "^6.17.0",
@@ -20,7 +21,9 @@
     "express": "^4.21.2",
     "helmet": "^7.2.0",
     "jsonwebtoken": "^9.0.2",
-    "zod": "^4.1.11"
+    "zod": "^4.1.11",
+    "tsx": "^4.20.6",
+    "prisma": "^6.17.0"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
@@ -31,9 +34,7 @@
     "@types/node": "^22.18.8",
     "autoprefixer": "^10.4.17",
     "postcss": "^8.4.35",
-    "prisma": "^6.17.0",
     "tailwindcss": "^3.4.1",
-    "tsx": "^4.20.6",
     "typescript": "^5.9.3"
   }
 }
