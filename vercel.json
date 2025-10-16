@@ -1,0 +1,12 @@
+{
+  "buildCommand": "cd myclean-frontend && npm install && npm run build",
+  "outputDirectory": "myclean-frontend/build",
+  "framework": null,
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}
+
