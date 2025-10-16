@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { FaCalendar, FaDollarSign, FaCheckCircle, FaClock, FaChartLine, FaStar } from 'react-icons/fa';
 import Card from '../../components/Card';
-import { format, startOfWeek, addDays } from 'date-fns';
+import { format } from 'date-fns';
 
 interface BookingRequest {
   id: number;

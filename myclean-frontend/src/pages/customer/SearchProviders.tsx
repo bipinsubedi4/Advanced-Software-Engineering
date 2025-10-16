@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { FaSearch, FaStar, FaMapMarkerAlt, FaDollarSign, FaFilter } from 'react-icons/fa';
 import Card from '../../components/Card';
 import { useNavigate } from 'react-router-dom';
@@ -26,7 +26,7 @@ const SearchProviders: React.FC = () => {
   const [showFilters, setShowFilters] = useState(false);
 
   // Mock data - replace with API call
-  const [providers, setProviders] = useState<Provider[]>([
+  const [providers] = useState<Provider[]>([
     {
       id: 1,
       name: 'Sarah Johnson',

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { FaPlus, FaTrash, FaClock, FaCalendar } from 'react-icons/fa';
 import Card from '../../components/Card';
 import Modal from '../../components/Modal';
-import { format, addDays, startOfWeek, isSameDay } from 'date-fns';
+import { format } from 'date-fns';
 
 interface TimeSlot {
   id: number;

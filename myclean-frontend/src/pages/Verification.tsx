@@ -3,7 +3,7 @@ import { FaCheckCircle, FaIdCard, FaPhone, FaEnvelope, FaUpload } from 'react-ic
 import Card from '../components/Card';
 
 const Verification: React.FC = () => {
-  const [emailVerified, setEmailVerified] = useState(true); // Auto verified on signup
+  const [emailVerified] = useState(true); // Auto verified on signup
   const [phoneNumber, setPhoneNumber] = useState('');
   const [phoneVerificationCode, setPhoneVerificationCode] = useState('');
   const [phoneVerified, setPhoneVerified] = useState(false);

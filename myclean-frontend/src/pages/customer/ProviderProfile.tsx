@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { FaStar, FaMapMarkerAlt, FaDollarSign, FaCheckCircle, FaClock, FaCalendar } from 'react-icons/fa';
 import Modal from '../../components/Modal';
-import { format, addDays } from 'date-fns';
+import { format } from 'date-fns';
 
 interface Review {
   id: number;

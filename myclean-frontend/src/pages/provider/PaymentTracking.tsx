@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { FaDollarSign, FaCalendar, FaDownload, FaChartBar, FaArrowUp } from 'react-icons/fa';
 import Card from '../../components/Card';
-import { format, subDays, startOfMonth, endOfMonth } from 'date-fns';
+import { format, subDays } from 'date-fns';
 
 interface Transaction {
   id: number;

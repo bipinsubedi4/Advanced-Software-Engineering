@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { FaPaperPlane, FaSearch, FaCircle } from 'react-icons/fa';
-import Card from '../../components/Card';
 import { format } from 'date-fns';
 
 interface Message {
