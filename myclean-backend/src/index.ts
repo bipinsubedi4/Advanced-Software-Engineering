@@ -8,7 +8,9 @@ import { authenticateToken, AuthRequest } from "./middleware";
 
 const app = express();
 app.use(helmet());
-app.use(cors()); // We will fix this for production later
+app.use(cors({
+  origin: "https://myclean-project.vercel.app" 
+})); // We will fix this for production later
 app.use(express.json());
 
 app.get("/api/health", (_req, res) => res.json({ ok: true }));
