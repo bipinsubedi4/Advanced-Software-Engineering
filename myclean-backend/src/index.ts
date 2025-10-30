@@ -2,27 +2,30 @@ import "dotenv/config";
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
-import { prisma } from "./prisma"; // <- uses src/prisma.ts
+import { prisma } from "./prisma"; 
 import authRouter from "./auth";
+import { authenticateToken, AuthRequest } from "./middleware";
 
 const app = express();
 app.use(helmet());
-app.use(cors());
+app.use(cors({
+  origin: "https://myclean-project.vercel.app" 
+})); // We will fix this for production later
 app.use(express.json());
 
-// Health check
 app.get("/api/health", (_req, res) => res.json({ ok: true }));
-
-// Auth routes
 app.use("/api/auth", authRouter);
 
-// Services
+// --- PROTECTED ROUTES ---
 app.get("/api/services", async (_req, res) => {
   const services = await prisma.service.findMany();
   res.json(services);
 });
 
-app.post("/api/services", async (req, res) => {
+app.post("/api/services", authenticateToken, async (req: AuthRequest, res) => {
+  if (req.user?.role !== "ADMIN") {
+    return res.status(403).json({ error: "Only admins can create services" });
+  }
   const { title, description, durationMin, priceCents } = req.body;
   const svc = await prisma.service.create({
     data: { title, description, durationMin, priceCents },
@@ -30,19 +33,31 @@ app.post("/api/services", async (req, res) => {
   res.status(201).json(svc);
 });
 
-// Bookings
-app.get("/api/bookings", async (_req, res) => {
-  const bookings = await prisma.booking.findMany({
-    include: { user: true, service: true },
-  });
+app.get("/api/bookings", authenticateToken, async (req: AuthRequest, res) => {
+  const userId = req.user!.sub;
+  const userRole = req.user!.role;
+
+  let bookings;
+  if (userRole === "ADMIN") {
+    bookings = await prisma.booking.findMany({
+      include: { user: true, service: true },
+    });
+  } else {
+    bookings = await prisma.booking.findMany({
+      where: { userId: userId },
+      include: { user: true, service: true },
+    });
+  }
   res.json(bookings);
 });
 
-app.post("/api/bookings", async (req, res) => {
-  const { userId, serviceId, startTime, endTime, address } = req.body;
+app.post("/api/bookings", authenticateToken, async (req: AuthRequest, res) => {
+  const { serviceId, startTime, endTime, address } = req.body;
+  const userId = req.user!.sub; 
+
   const booking = await prisma.booking.create({
     data: {
-      userId,
+      userId: userId,
       serviceId,
       startTime: new Date(startTime),
       endTime: new Date(endTime),
@@ -52,16 +67,20 @@ app.post("/api/bookings", async (req, res) => {
   res.status(201).json(booking);
 });
 
-// Users
-app.get("/api/users", async (_req, res) => {
-  const users = await prisma.user.findMany();
+app.get("/api/users", authenticateToken, async (req: AuthRequest, res) => {
+  if (req.user?.role !== "ADMIN") {
+    return res.status(403).json({ error: "Forbidden" });
+  }
+  const users = await prisma.user.findMany({
+    select: {
+      id: true,
+      email: true,
+      name: true,
+      role: true,
+      createdAt: true,
+    },
+  });
   res.json(users);
-});
-
-app.post("/api/users", async (req, res) => {
-  const { email, name } = req.body;
-  const user = await prisma.user.create({ data: { email, name } });
-  res.status(201).json(user);
 });
 
 const port = Number(process.env.PORT || 4000);
