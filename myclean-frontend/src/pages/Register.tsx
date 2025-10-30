@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
@@ -9,20 +9,34 @@ const Register: React.FC = () => {
   const [role, setRole] = useState<'CUSTOMER' | 'PROVIDER'>('CUSTOMER');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const { register } = useAuth();
+  const [justRegistered, setJustRegistered] = useState(false);
+  const { register, user } = useAuth();
   const navigate = useNavigate();
+
+  // Redirect after successful registration when user is set
+  useEffect(() => {
+    if (user && justRegistered) {
+      if (user.role === 'PROVIDER') {
+        navigate('/provider/home');
+      } else if (user.role === 'CUSTOMER') {
+        navigate('/search');
+      } else if (user.role === 'ADMIN') {
+        navigate('/admin');
+      }
+    }
+  }, [user, justRegistered, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setLoading(true);
-
+    
     try {
       await register(name, email, password, role);
-      navigate('/dashboard');
+      setJustRegistered(true);
+      setLoading(false);
     } catch (err: any) {
       setError(err.response?.data?.error || 'Registration failed. Please try again.');
-    } finally {
       setLoading(false);
     }
   };

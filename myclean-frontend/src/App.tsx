@@ -17,6 +17,8 @@ import Payment from './pages/customer/Payment';
 
 // Provider Pages
 import ProviderDashboard from './pages/provider/Dashboard';
+import ProviderLandingPage from './pages/provider/ProviderLandingPage';
+import ProviderProfileSetup from './pages/provider/ProviderProfileSetup';
 import AvailabilityCalendar from './pages/provider/AvailabilityCalendar';
 import Messages from './pages/provider/Messages';
 import PaymentTracking from './pages/provider/PaymentTracking';
@@ -39,7 +41,7 @@ function App() {
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
 
-            {/* Customer Routes */}
+            {/* Customer Routes - Providers CANNOT access these */}
             <Route
               path="/search"
               element={
@@ -74,6 +76,22 @@ function App() {
             />
 
             {/* Provider Routes */}
+            <Route
+              path="/provider/home"
+              element={
+                <ProtectedRoute allowedRoles={['PROVIDER']}>
+                  <ProviderLandingPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/provider/profile-setup"
+              element={
+                <ProtectedRoute allowedRoles={['PROVIDER']}>
+                  <ProviderProfileSetup />
+                </ProtectedRoute>
+              }
+            />
             <Route
               path="/provider/dashboard"
               element={
@@ -153,7 +171,7 @@ const DashboardRedirect: React.FC = () => {
   if (!user) return <Navigate to="/login" replace />;
 
   if (user.role === 'ADMIN') return <Navigate to="/admin" replace />;
-  if (user.role === 'PROVIDER') return <Navigate to="/provider/dashboard" replace />;
+  if (user.role === 'PROVIDER') return <Navigate to="/provider/home" replace />;
   return <Navigate to="/search" replace />;
 };
 

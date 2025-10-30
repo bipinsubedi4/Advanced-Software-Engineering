@@ -39,13 +39,16 @@ const Navbar: React.FC = () => {
                 )}
                 {user.role === 'PROVIDER' && (
                   <>
-                    <Link to="/provider/dashboard" className="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium flex items-center">
+                    <Link to="/provider/home" className="text-gray-700 hover:text-indigo-600 px-3 py-2 rounded-md text-sm font-medium">
+                      Home
+                    </Link>
+                    <Link to="/provider/dashboard" className="text-gray-700 hover:text-indigo-600 px-3 py-2 rounded-md text-sm font-medium flex items-center">
                       <FaChartBar className="mr-2" /> Dashboard
                     </Link>
-                    <Link to="/provider/calendar" className="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium flex items-center">
+                    <Link to="/provider/calendar" className="text-gray-700 hover:text-indigo-600 px-3 py-2 rounded-md text-sm font-medium flex items-center">
                       <FaCalendar className="mr-2" /> Calendar
                     </Link>
-                    <Link to="/provider/messages" className="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium">
+                    <Link to="/provider/messages" className="text-gray-700 hover:text-indigo-600 px-3 py-2 rounded-md text-sm font-medium">
                       Messages
                     </Link>
                   </>
@@ -109,6 +112,9 @@ const Navbar: React.FC = () => {
                 )}
                 {user.role === 'PROVIDER' && (
                   <>
+                    <Link to="/provider/home" className="block text-gray-700 hover:bg-blue-50 px-3 py-2 rounded-md text-base font-medium">
+                      Home
+                    </Link>
                     <Link to="/provider/dashboard" className="block text-gray-700 hover:bg-blue-50 px-3 py-2 rounded-md text-base font-medium">
                       Dashboard
                     </Link>

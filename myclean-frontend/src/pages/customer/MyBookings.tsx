@@ -21,10 +21,17 @@ interface Booking {
 const MyBookings: React.FC = () => {
   const [filter, setFilter] = useState<'all' | 'upcoming' | 'completed' | 'cancelled'>('all');
   const [showReviewModal, setShowReviewModal] = useState(false);
+  const [showMessageModal, setShowMessageModal] = useState(false);
+  const [showRescheduleModal, setShowRescheduleModal] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [rating, setRating] = useState(0);
   const [review, setReview] = useState('');
   const [reviewPhotos, setReviewPhotos] = useState<File[]>([]);
+  const [message, setMessage] = useState('');
+  const [newDate, setNewDate] = useState('');
+  const [newTime, setNewTime] = useState('');
+  const [cancelReason, setCancelReason] = useState('');
 
   // Mock bookings data
   const bookings: Booking[] = [
@@ -85,6 +92,51 @@ const MyBookings: React.FC = () => {
     setRating(0);
     setReview('');
     setReviewPhotos([]);
+  };
+
+  const handleMessageProvider = (booking: Booking) => {
+    setSelectedBooking(booking);
+    setShowMessageModal(true);
+  };
+
+  const submitMessage = (e: React.FormEvent) => {
+    e.preventDefault();
+    console.log({ bookingId: selectedBooking?.id, message });
+    // TODO: Integrate with backend API
+    alert('Message sent to provider successfully!');
+    setShowMessageModal(false);
+    setMessage('');
+  };
+
+  const handleReschedule = (booking: Booking) => {
+    setSelectedBooking(booking);
+    setNewDate(booking.date);
+    setNewTime(booking.time);
+    setShowRescheduleModal(true);
+  };
+
+  const submitReschedule = (e: React.FormEvent) => {
+    e.preventDefault();
+    console.log({ bookingId: selectedBooking?.id, newDate, newTime });
+    // TODO: Integrate with backend API
+    alert('Reschedule request submitted successfully!');
+    setShowRescheduleModal(false);
+    setNewDate('');
+    setNewTime('');
+  };
+
+  const handleCancelBooking = (booking: Booking) => {
+    setSelectedBooking(booking);
+    setShowCancelModal(true);
+  };
+
+  const submitCancellation = (e: React.FormEvent) => {
+    e.preventDefault();
+    console.log({ bookingId: selectedBooking?.id, cancelReason });
+    // TODO: Integrate with backend API
+    alert('Booking cancelled successfully!');
+    setShowCancelModal(false);
+    setCancelReason('');
   };
 
   const getStatusColor = (status: string) => {
@@ -166,13 +218,22 @@ const MyBookings: React.FC = () => {
                 <div className="mt-4 md:mt-0 md:ml-6 flex flex-col space-y-2 min-w-[200px]">
                   {booking.status === 'upcoming' && (
                     <>
-                      <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center">
+                      <button 
+                        onClick={() => handleMessageProvider(booking)}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center"
+                      >
                         <FaComments className="mr-2" /> Message Provider
                       </button>
-                      <button className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
+                      <button 
+                        onClick={() => handleReschedule(booking)}
+                        className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                      >
                         Reschedule
                       </button>
-                      <button className="px-4 py-2 border border-red-300 text-red-600 rounded-lg hover:bg-red-50 transition-colors">
+                      <button 
+                        onClick={() => handleCancelBooking(booking)}
+                        className="px-4 py-2 border border-red-300 text-red-600 rounded-lg hover:bg-red-50 transition-colors"
+                      >
                         Cancel Booking
                       </button>
                     </>
@@ -277,6 +338,150 @@ const MyBookings: React.FC = () => {
               className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Submit Review
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Message Provider Modal */}
+      <Modal
+        isOpen={showMessageModal}
+        onClose={() => setShowMessageModal(false)}
+        title={`Message ${selectedBooking?.providerName}`}
+      >
+        <form onSubmit={submitMessage} className="space-y-6">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Your Message
+            </label>
+            <textarea
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              rows={6}
+              required
+              placeholder="Type your message to the provider..."
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          </div>
+
+          <div className="flex gap-4">
+            <button
+              type="button"
+              onClick={() => setShowMessageModal(false)}
+              className="flex-1 px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              Send Message
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Reschedule Modal */}
+      <Modal
+        isOpen={showRescheduleModal}
+        onClose={() => setShowRescheduleModal(false)}
+        title="Reschedule Booking"
+      >
+        <form onSubmit={submitReschedule} className="space-y-6">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              New Date
+            </label>
+            <input
+              type="date"
+              value={newDate}
+              onChange={(e) => setNewDate(e.target.value)}
+              required
+              min={new Date().toISOString().split('T')[0]}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              New Time
+            </label>
+            <input
+              type="time"
+              value={newTime}
+              onChange={(e) => setNewTime(e.target.value)}
+              required
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          </div>
+
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+            <p className="text-sm text-yellow-800">
+              <strong>Note:</strong> Your reschedule request will be sent to the provider for approval. 
+              You'll be notified once they respond.
+            </p>
+          </div>
+
+          <div className="flex gap-4">
+            <button
+              type="button"
+              onClick={() => setShowRescheduleModal(false)}
+              className="flex-1 px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              Request Reschedule
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Cancel Booking Modal */}
+      <Modal
+        isOpen={showCancelModal}
+        onClose={() => setShowCancelModal(false)}
+        title="Cancel Booking"
+      >
+        <form onSubmit={submitCancellation} className="space-y-6">
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+            <p className="text-sm text-red-800">
+              <strong>Warning:</strong> Cancelling this booking may incur cancellation fees depending on 
+              the provider's policy and how close to the booking date you are.
+            </p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Reason for Cancellation
+            </label>
+            <textarea
+              value={cancelReason}
+              onChange={(e) => setCancelReason(e.target.value)}
+              rows={4}
+              required
+              placeholder="Please provide a reason for cancellation..."
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          </div>
+
+          <div className="flex gap-4">
+            <button
+              type="button"
+              onClick={() => setShowCancelModal(false)}
+              className="flex-1 px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              Keep Booking
+            </button>
+            <button
+              type="submit"
+              className="flex-1 px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+            >
+              Cancel Booking
             </button>
           </div>
         </form>
