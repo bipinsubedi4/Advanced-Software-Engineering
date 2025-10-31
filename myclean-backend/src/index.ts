@@ -11,10 +11,28 @@ import { authenticateToken, AuthRequest } from "./middleware";
 
 const app = express();
 app.use(helmet());
+
+// CORS configuration - accept multiple origins
+const allowedOrigins = [
+  "http://localhost:3000",
+  "https://myclean-project.vercel.app",
+  "https://advanced-software-engineering-orpin.vercel.app"
+];
+
 app.use(cors({
-  origin: ["http://localhost:3000", "https://myclean-project.vercel.app"],
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like mobile apps or Postman)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true
 }));
+
 app.use(express.json());
 
 app.get("/api/health", (_req, res) => res.json({ ok: true }));
@@ -117,4 +135,8 @@ app.post("/api/messages", async (req, res) => {
 });
 
 const port = Number(process.env.PORT || 4000);
-app.listen(port, () => console.log(`API running at http://localhost:${port}`));
+app.listen(port, '0.0.0.0', () => {
+  console.log(`🚀 MyClean Backend API running on port ${port}`);
+  console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`✅ Health check: http://localhost:${port}/api/health`);
+});
