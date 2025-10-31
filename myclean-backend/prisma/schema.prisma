@@ -1,5 +1,5 @@
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
@@ -7,37 +7,161 @@ generator client {
   provider = "prisma-client-js"
 }
 
-
+// User model - for both customers and providers
 model User {
-  id           Int      @id @default(autoincrement())
-  email        String   @unique
-  name         String
-  passwordHash String
-  role         String   @default("CUSTOMER") // CUSTOMER | PROVIDER | ADMIN
-  createdAt    DateTime @default(now())
-  bookings     Booking[]
+  id                Int                @id @default(autoincrement())
+  email             String             @unique
+  name              String
+  passwordHash      String
+  role              String             @default("CUSTOMER") // CUSTOMER | PROVIDER | ADMIN
+  phone             String?
+  profileImage      String?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  
+  // Relations
+  customerBookings  Booking[]          @relation("CustomerBookings")
+  providerBookings  Booking[]          @relation("ProviderBookings")
+  providerProfile   ProviderProfile?
+  reviews           Review[]
+  sentMessages      Message[]          @relation("SentMessages")
+  receivedMessages  Message[]          @relation("ReceivedMessages")
+  notifications     Notification[]
 }
 
-
-
-model Service {
-  id          Int      @id @default(autoincrement())
-  title       String
-  description String
-  durationMin Int
-  priceCents  Int
-  bookings    Booking[]
+// Provider-specific information
+model ProviderProfile {
+  id                Int                 @id @default(autoincrement())
+  userId            Int                 @unique
+  bio               String?
+  yearsExperience   String?
+  hasInsurance      Boolean             @default(false)
+  insuranceProvider String?
+  hasVehicle        Boolean             @default(false)
+  hasEquipment      Boolean             @default(false)
+  certifications    String?
+  address           String?
+  city              String?
+  state             String?
+  zipCode           String?
+  serviceRadius     Int                 @default(10) // in km
+  isVerified        Boolean             @default(false)
+  isActive          Boolean             @default(true)
+  profileComplete   Boolean             @default(false)
+  averageRating     Float               @default(0)
+  totalReviews      Int                 @default(0)
+  totalBookings     Int                 @default(0)
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  
+  // Relations
+  user              User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  services          ProviderService[]
+  availability      ProviderAvailability[]
 }
 
+// Services offered by providers
+model ProviderService {
+  id              Int             @id @default(autoincrement())
+  providerId      Int
+  serviceName     String
+  description     String?
+  pricePerHour    Int             // in cents
+  durationMin     Int             // minimum duration in minutes
+  isActive        Boolean         @default(true)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  
+  // Relations
+  provider        ProviderProfile @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  bookings        Booking[]
+}
+
+// Provider availability schedule
+model ProviderAvailability {
+  id          Int             @id @default(autoincrement())
+  providerId  Int
+  dayOfWeek   String          // MONDAY, TUESDAY, etc.
+  startTime   String          // HH:MM format
+  endTime     String          // HH:MM format
+  isAvailable Boolean         @default(true)
+  
+  // Relations
+  provider    ProviderProfile @relation(fields: [providerId], references: [id], onDelete: Cascade)
+}
+
+// Bookings between customers and providers
 model Booking {
+  id                Int              @id @default(autoincrement())
+  customerId        Int
+  providerId        Int
+  serviceId         Int
+  bookingDate       DateTime
+  startTime         String           // HH:MM format
+  endTime           String           // HH:MM format
+  address           String
+  city              String
+  state             String
+  zipCode           String
+  specialInstructions String?
+  status            String           @default("PENDING") // PENDING, ACCEPTED, DECLINED, COMPLETED, CANCELLED
+  totalPrice        Int              // in cents
+  paymentStatus     String           @default("PENDING") // PENDING, PAID, REFUNDED
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  
+  // Relations
+  customer          User             @relation("CustomerBookings", fields: [customerId], references: [id])
+  provider          User             @relation("ProviderBookings", fields: [providerId], references: [id])
+  service           ProviderService  @relation(fields: [serviceId], references: [id])
+  review            Review?
+  messages          Message[]
+}
+
+// Reviews and ratings
+model Review {
+  id          Int      @id @default(autoincrement())
+  bookingId   Int      @unique
+  customerId  Int
+  rating      Int      // 1-5 stars
+  comment     String?
+  photos      String?  // JSON array of photo URLs
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  booking     Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  customer    User     @relation(fields: [customerId], references: [id])
+}
+
+// Notifications for users
+model Notification {
   id        Int      @id @default(autoincrement())
   userId    Int
-  serviceId Int
-  startTime DateTime
-  endTime   DateTime
-  address   String
-  status    String   @default("PENDING")
-  user      User     @relation(fields: [userId], references: [id])
-  service   Service  @relation(fields: [serviceId], references: [id])
+  type      String   // BOOKING_REQUEST, BOOKING_ACCEPTED, BOOKING_DECLINED, etc.
+  title     String
+  message   String
+  isRead    Boolean  @default(false)
+  link      String?  // URL to relevant page
+  createdAt DateTime @default(now())
+  
+  // Relations
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// In-app messaging
+model Message {
+  id         Int      @id @default(autoincrement())
+  bookingId  Int
+  senderId   Int
+  receiverId Int
+  content    String
+  isRead     Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  
+  // Relations
+  booking    Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  sender     User     @relation("SentMessages", fields: [senderId], references: [id])
+  receiver   User     @relation("ReceivedMessages", fields: [receiverId], references: [id])
 }
 

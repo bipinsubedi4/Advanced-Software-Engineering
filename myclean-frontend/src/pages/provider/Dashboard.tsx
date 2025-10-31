@@ -1,93 +1,148 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { FaCalendar, FaDollarSign, FaCheckCircle, FaClock, FaChartLine, FaStar, FaUserEdit, FaComments, FaExclamationCircle } from 'react-icons/fa';
+import { FaCalendar, FaDollarSign, FaCheckCircle, FaClock, FaChartLine, FaStar, FaUserEdit, FaComments, FaExclamationCircle, FaBell } from 'react-icons/fa';
 import { useAuth } from '../../context/AuthContext';
 import Card from '../../components/Card';
 import { format } from 'date-fns';
+import axios from 'axios';
 
-interface BookingRequest {
+interface Booking {
   id: number;
-  customerName: string;
-  service: string;
-  date: string;
-  time: string;
-  duration: number;
-  price: number;
+  bookingDate: string;
+  startTime: string;
+  endTime: string;
   address: string;
+  city: string;
+  state: string;
+  status: string;
+  totalPrice: number;
+  customer: {
+    name: string;
+    email: string;
+    phone: string;
+  };
+  service: {
+    name: string;
+  };
+}
+
+interface Notification {
+  id: number;
+  type: string;
+  title: string;
+  message: string;
+  isRead: boolean;
+  createdAt: string;
 }
 
 const ProviderDashboard: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   
-  // TODO: Check if profile is complete from backend
   const [profileComplete, setProfileComplete] = useState(false);
-  
-  // Show mock data only if profile is complete, otherwise show zeros
-  const [bookingRequests, setBookingRequests] = useState<BookingRequest[]>(
-    profileComplete ? [
-      {
-        id: 1,
-        customerName: 'John Smith',
-        service: 'Deep Cleaning',
-        date: '2024-01-25',
-        time: '10:00 AM',
-        duration: 3,
-        price: 135,
-        address: '123 Main St, Sydney NSW 2000',
-      },
-      {
-        id: 2,
-        customerName: 'Emily Davis',
-        service: 'Regular Cleaning',
-        date: '2024-01-26',
-        time: '02:00 PM',
-        duration: 2,
-        price: 90,
-        address: '456 Oak Ave, Sydney NSW 2001',
-      },
-    ] : []
-  );
-
-  const upcomingBookings = profileComplete ? [
-    {
-      id: 3,
-      customerName: 'Michael Brown',
-      service: 'Move-out Cleaning',
-      date: '2024-01-24',
-      time: '09:00 AM',
-      duration: 4,
-      price: 180,
-      address: '789 Pine Rd, Sydney NSW 2002',
-    },
-  ] : [];
-
-  // Zero stats for new providers, mock data for complete profiles
-  const stats = profileComplete ? {
-    weeklyEarnings: 1250,
-    monthlyEarnings: 4850,
-    completedJobs: 127,
-    averageRating: 4.9,
-    responseRate: 98,
-    upcomingJobs: 5,
-  } : {
+  const [loading, setLoading] = useState(true);
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [stats, setStats] = useState({
     weeklyEarnings: 0,
     monthlyEarnings: 0,
     completedJobs: 0,
     averageRating: 0,
     responseRate: 0,
     upcomingJobs: 0,
+  });
+
+  useEffect(() => {
+    if (user) {
+      fetchData();
+    }
+  }, [user]);
+
+  const fetchData = async () => {
+    if (!user) return;
+
+    try {
+      setLoading(true);
+      
+      // Fetch bookings
+      const bookingsResponse = await axios.get(`/api/bookings/user/${user.id}?role=PROVIDER`);
+      const allBookings = bookingsResponse.data.bookings || [];
+      setBookings(allBookings);
+
+      // Fetch notifications
+      const notificationsResponse = await axios.get(`/api/notifications/${user.id}`);
+      const allNotifications = notificationsResponse.data.notifications || [];
+      setNotifications(allNotifications.filter((n: Notification) => !n.isRead).slice(0, 3));
+
+      // Calculate stats
+      const completed = allBookings.filter((b: Booking) => b.status === 'COMPLETED');
+      const pending = allBookings.filter((b: Booking) => b.status === 'PENDING');
+      const accepted = allBookings.filter((b: Booking) => b.status === 'ACCEPTED');
+
+      const totalEarnings = completed.reduce((sum: number, b: Booking) => sum + b.totalPrice, 0);
+      
+      setStats({
+        weeklyEarnings: totalEarnings * 0.2, // Mock weekly calculation
+        monthlyEarnings: totalEarnings,
+        completedJobs: completed.length,
+        averageRating: 4.8, // TODO: Get from provider profile
+        responseRate: 98, // TODO: Calculate
+        upcomingJobs: accepted.length,
+      });
+
+      setProfileComplete(true); // TODO: Get from provider profile
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleAccept = (requestId: number) => {
-    console.log('Accepted booking:', requestId);
-    setBookingRequests(prev => prev.filter(r => r.id !== requestId));
+  const handleAccept = async (bookingId: number) => {
+    if (!user) return;
+
+    try {
+      await axios.patch(`/api/bookings/${bookingId}/status`, {
+        status: 'ACCEPTED',
+        userId: user.id,
+      });
+      fetchData(); // Refresh data
+      alert('Booking accepted successfully!');
+    } catch (error) {
+      console.error('Error accepting booking:', error);
+      alert('Failed to accept booking');
+    }
   };
 
-  const handleDecline = (requestId: number) => {
-    console.log('Declined booking:', requestId);
-    setBookingRequests(prev => prev.filter(r => r.id !== requestId));
+  const handleDecline = async (bookingId: number) => {
+    if (!user) return;
+
+    try {
+      await axios.patch(`/api/bookings/${bookingId}/status`, {
+        status: 'DECLINED',
+        userId: user.id,
+      });
+      fetchData(); // Refresh data
+      alert('Booking declined');
+    } catch (error) {
+      console.error('Error declining booking:', error);
+      alert('Failed to decline booking');
+    }
   };
+
+  const pendingBookings = bookings.filter(b => b.status === 'PENDING');
+  const upcomingBookings = bookings.filter(b => b.status === 'ACCEPTED');
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
+          <p className="text-gray-600 mt-4">Loading dashboard...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -97,33 +152,31 @@ const ProviderDashboard: React.FC = () => {
           <p className="text-gray-600">Welcome back, {user?.name}!</p>
         </div>
 
-        {/* Profile Completion Alert */}
-        {!profileComplete && (
-          <Card className="mb-6 bg-yellow-50 border-2 border-yellow-200">
+        {/* Notifications Alert - New Bookings */}
+        {notifications.length > 0 && (
+          <Card className="mb-6 bg-blue-50 border-2 border-blue-200">
             <div className="flex items-start">
-              <FaExclamationCircle className="text-yellow-600 text-3xl mr-4 flex-shrink-0 mt-1" />
+              <FaBell className="text-blue-600 text-3xl mr-4 flex-shrink-0 mt-1 animate-pulse" />
               <div className="flex-1">
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                  Complete Your Profile to Start Earning
+                  {notifications.length} New Notification{notifications.length > 1 ? 's' : ''}
                 </h3>
-                <p className="text-gray-700 mb-4">
-                  You haven't completed your provider profile yet. Complete your profile to start receiving booking requests and earning money!
-                </p>
-                <div className="flex flex-wrap gap-3">
-                  <Link
-                    to="/provider/profile-setup"
-                    className="bg-yellow-600 text-white px-6 py-2 rounded-lg hover:bg-yellow-700 transition-colors font-semibold inline-flex items-center"
-                  >
-                    <FaUserEdit className="mr-2" />
-                    Complete Profile Now
-                  </Link>
-                  <Link
-                    to="/provider/home"
-                    className="bg-white border border-yellow-600 text-yellow-700 px-6 py-2 rounded-lg hover:bg-yellow-50 transition-colors font-semibold"
-                  >
-                    Learn More About Benefits
-                  </Link>
+                <div className="space-y-2 mb-4">
+                  {notifications.map((notif) => (
+                    <div key={notif.id} className="bg-white p-3 rounded-lg border border-blue-100">
+                      <p className="font-medium text-gray-900">{notif.title}</p>
+                      <p className="text-sm text-gray-600">{notif.message}</p>
+                      <p className="text-xs text-gray-400 mt-1">
+                        {new Date(notif.createdAt).toLocaleString()}
+                      </p>
+                    </div>
+                  ))}
                 </div>
+                {pendingBookings.length > 0 && (
+                  <p className="text-blue-700 font-medium">
+                    You have {pendingBookings.length} pending booking request{pendingBookings.length > 1 ? 's' : ''} to review!
+                  </p>
+                )}
               </div>
             </div>
           </Card>
@@ -199,48 +252,54 @@ const ProviderDashboard: React.FC = () => {
           <div className="lg:col-span-2">
             <Card>
               <h2 className="text-xl font-semibold text-gray-900 mb-4">
-                Booking Requests ({bookingRequests.length})
+                Booking Requests ({pendingBookings.length})
               </h2>
               
-              {bookingRequests.length === 0 ? (
+              {pendingBookings.length === 0 ? (
                 <div className="text-center py-8 text-gray-500">
                   <FaCalendar className="mx-auto text-4xl mb-2 text-gray-300" />
                   <p>No pending requests</p>
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {bookingRequests.map(request => (
-                    <div key={request.id} className="border border-gray-200 rounded-lg p-4 hover:border-blue-300 transition-colors">
+                  {pendingBookings.map(booking => (
+                    <div key={booking.id} className="border border-gray-200 rounded-lg p-4 hover:border-blue-300 transition-colors">
                       <div className="flex justify-between items-start mb-3">
                         <div>
-                          <h3 className="font-semibold text-lg text-gray-900">{request.customerName}</h3>
-                          <p className="text-gray-600">{request.service}</p>
+                          <h3 className="font-semibold text-lg text-gray-900">{booking.customer.name}</h3>
+                          <p className="text-gray-600">{booking.service.name}</p>
                         </div>
-                        <span className="text-xl font-bold text-blue-600">${request.price}</span>
+                        <span className="text-xl font-bold text-blue-600">${booking.totalPrice.toFixed(2)}</span>
                       </div>
                       
                       <div className="grid grid-cols-2 gap-2 text-sm text-gray-600 mb-4">
                         <div className="flex items-center">
                           <FaCalendar className="mr-2 text-blue-600" />
-                          {format(new Date(request.date), 'MMM d, yyyy')}
+                          {format(new Date(booking.bookingDate), 'MMM d, yyyy')}
                         </div>
                         <div className="flex items-center">
                           <FaClock className="mr-2 text-blue-600" />
-                          {request.time} ({request.duration}h)
+                          {booking.startTime} - {booking.endTime}
                         </div>
                       </div>
                       
-                      <p className="text-sm text-gray-600 mb-4">{request.address}</p>
+                      <p className="text-sm text-gray-600 mb-2">
+                        {booking.address}, {booking.city}, {booking.state}
+                      </p>
+                      
+                      <p className="text-sm text-gray-500 mb-4">
+                        Customer: {booking.customer.phone}
+                      </p>
                       
                       <div className="flex gap-3">
                         <button
-                          onClick={() => handleAccept(request.id)}
+                          onClick={() => handleAccept(booking.id)}
                           className="flex-1 bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 transition-colors font-medium"
                         >
                           Accept
                         </button>
                         <button
-                          onClick={() => handleDecline(request.id)}
+                          onClick={() => handleDecline(booking.id)}
                           className="flex-1 bg-red-600 text-white py-2 rounded-lg hover:bg-red-700 transition-colors font-medium"
                         >
                           Decline
@@ -261,19 +320,29 @@ const ProviderDashboard: React.FC = () => {
               </h2>
               
               <div className="space-y-3">
-                {upcomingBookings.map(booking => (
-                  <div key={booking.id} className="border-l-4 border-blue-600 bg-blue-50 p-3 rounded">
-                    <p className="font-semibold text-gray-900">{booking.customerName}</p>
-                    <p className="text-sm text-gray-600">{booking.service}</p>
-                    <div className="flex items-center text-sm text-gray-600 mt-2">
-                      <FaCalendar className="mr-2" />
-                      {format(new Date(booking.date), 'MMM d')} at {booking.time}
-                    </div>
-                    <p className="text-lg font-bold text-blue-600 mt-2">${booking.price}</p>
+                {upcomingBookings.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">
+                    <FaCalendar className="mx-auto text-3xl mb-2 text-gray-300" />
+                    <p className="text-sm">No upcoming bookings</p>
                   </div>
-                ))}
+                ) : (
+                  upcomingBookings.slice(0, 3).map(booking => (
+                    <div key={booking.id} className="border-l-4 border-blue-600 bg-blue-50 p-3 rounded">
+                      <p className="font-semibold text-gray-900">{booking.customer.name}</p>
+                      <p className="text-sm text-gray-600">{booking.service.name}</p>
+                      <div className="flex items-center text-sm text-gray-600 mt-2">
+                        <FaCalendar className="mr-2" />
+                        {format(new Date(booking.bookingDate), 'MMM d')} at {booking.startTime}
+                      </div>
+                      <p className="text-lg font-bold text-blue-600 mt-2">${booking.totalPrice.toFixed(2)}</p>
+                    </div>
+                  ))
+                )}
                 
-                <button className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition-colors mt-4">
+                <button 
+                  onClick={() => navigate('/provider/calendar')}
+                  className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition-colors mt-4"
+                >
                   View Full Calendar
                 </button>
               </div>

@@ -4,68 +4,28 @@ import cors from "cors";
 import helmet from "helmet";
 import { prisma } from "./prisma"; 
 import authRouter from "./auth";
+import providersRouter from "./providers";
+import bookingsRouter from "./bookings";
+import reviewsRouter from "./reviews";
 import { authenticateToken, AuthRequest } from "./middleware";
 
 const app = express();
 app.use(helmet());
 app.use(cors({
-  origin: "https://myclean-project.vercel.app" 
-})); // We will fix this for production later
+  origin: ["http://localhost:3000", "https://myclean-project.vercel.app"],
+  credentials: true
+}));
 app.use(express.json());
 
 app.get("/api/health", (_req, res) => res.json({ ok: true }));
 app.use("/api/auth", authRouter);
 
-// --- PROTECTED ROUTES ---
-app.get("/api/services", async (_req, res) => {
-  const services = await prisma.service.findMany();
-  res.json(services);
-});
+// New API routes for Iteration 2
+app.use("/api/providers", providersRouter);
+app.use("/api/bookings", bookingsRouter);
+app.use("/api/reviews", reviewsRouter);
 
-app.post("/api/services", authenticateToken, async (req: AuthRequest, res) => {
-  if (req.user?.role !== "ADMIN") {
-    return res.status(403).json({ error: "Only admins can create services" });
-  }
-  const { title, description, durationMin, priceCents } = req.body;
-  const svc = await prisma.service.create({
-    data: { title, description, durationMin, priceCents },
-  });
-  res.status(201).json(svc);
-});
-
-app.get("/api/bookings", authenticateToken, async (req: AuthRequest, res) => {
-  const userId = req.user!.sub;
-  const userRole = req.user!.role;
-
-  let bookings;
-  if (userRole === "ADMIN") {
-    bookings = await prisma.booking.findMany({
-      include: { user: true, service: true },
-    });
-  } else {
-    bookings = await prisma.booking.findMany({
-      where: { userId: userId },
-      include: { user: true, service: true },
-    });
-  }
-  res.json(bookings);
-});
-
-app.post("/api/bookings", authenticateToken, async (req: AuthRequest, res) => {
-  const { serviceId, startTime, endTime, address } = req.body;
-  const userId = req.user!.sub; 
-
-  const booking = await prisma.booking.create({
-    data: {
-      userId: userId,
-      serviceId,
-      startTime: new Date(startTime),
-      endTime: new Date(endTime),
-      address,
-    },
-  });
-  res.status(201).json(booking);
-});
+// --- ADMIN ROUTES ---
 
 app.get("/api/users", authenticateToken, async (req: AuthRequest, res) => {
   if (req.user?.role !== "ADMIN") {
@@ -81,6 +41,79 @@ app.get("/api/users", authenticateToken, async (req: AuthRequest, res) => {
     },
   });
   res.json(users);
+});
+
+// Notification routes
+app.get("/api/notifications/:userId", async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const notifications = await prisma.notification.findMany({
+      where: { userId: parseInt(userId) },
+      orderBy: { createdAt: "desc" },
+      take: 50,
+    });
+    res.json({ success: true, notifications });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to get notifications" });
+  }
+});
+
+app.patch("/api/notifications/:id/read", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const notification = await prisma.notification.update({
+      where: { id: parseInt(id) },
+      data: { isRead: true },
+    });
+    res.json({ success: true, notification });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to update notification" });
+  }
+});
+
+// Message routes
+app.get("/api/messages/booking/:bookingId", async (req, res) => {
+  try {
+    const { bookingId } = req.params;
+    const messages = await prisma.message.findMany({
+      where: { bookingId: parseInt(bookingId) },
+      include: {
+        sender: { select: { id: true, name: true, profileImage: true } },
+        receiver: { select: { id: true, name: true, profileImage: true } },
+      },
+      orderBy: { createdAt: "asc" },
+    });
+    res.json({ success: true, messages });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to get messages" });
+  }
+});
+
+app.post("/api/messages", async (req, res) => {
+  try {
+    const { bookingId, senderId, receiverId, content } = req.body;
+    const message = await prisma.message.create({
+      data: { bookingId, senderId, receiverId, content },
+      include: {
+        sender: { select: { id: true, name: true, profileImage: true } },
+      },
+    });
+    
+    // Create notification for receiver
+    await prisma.notification.create({
+      data: {
+        userId: receiverId,
+        type: "NEW_MESSAGE",
+        title: "New Message",
+        message: `${message.sender.name} sent you a message`,
+        link: `/my-bookings`,
+      },
+    });
+    
+    res.status(201).json({ success: true, message });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to send message" });
+  }
 });
 
 const port = Number(process.env.PORT || 4000);
