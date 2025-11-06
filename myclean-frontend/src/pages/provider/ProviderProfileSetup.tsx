@@ -1,5 +1,5 @@
 // src/pages/provider/ProviderProfileSetup.tsx
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   FaUser,
@@ -12,8 +12,10 @@ import {
   FaCheckCircle,
 } from "react-icons/fa";
 import Card from "../../components/Card";
+import Modal from "../../components/Modal";
 import axios from "axios";
 import { useAuth } from "../../context/AuthContext";
+import { useProviderProfile } from "../../hooks/useProviderProfile";
 
 // Get API base URL
 const API_BASE = process.env.REACT_APP_API_URL?.replace(/\/+$/, '') || 'http://localhost:4000';
@@ -34,10 +36,14 @@ type Service = {
 const ProviderProfileSetup: React.FC = () => {
   const navigate = useNavigate();
   const { user, token } = useAuth();
+  const { profileComplete, loading: profileLoading } = useProviderProfile();
   const [currentStep, setCurrentStep] = useState(1);
   const totalSteps = 5;
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [loadingProfileData, setLoadingProfileData] = useState(false);
 
   // Step 1: Basic Information
   const [fullName, setFullName] = useState(user?.name ?? "");
@@ -91,11 +97,104 @@ const ProviderProfileSetup: React.FC = () => {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const filesCollected = { profilePhoto, workPhotos, idDocument, insuranceDocument };
 
+  // Load existing profile data when in edit mode
+  useEffect(() => {
+    const loadExistingProfile = async () => {
+      if (!user || !token || profileLoading) return;
+      
+      if (profileComplete === true) {
+        setIsEditMode(true);
+        setLoadingProfileData(true);
+        
+        try {
+          const response = await axios.get(`${API_BASE}/api/providers/profile/${user.id}`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          
+          if (response.data.success && response.data.profile) {
+            const profile = response.data.profile;
+            
+            // Pre-populate basic info
+            setFullName(profile.user?.name || user.name || "");
+            setPhone(profile.user?.phone || "");
+            setAddress(profile.address || "");
+            setCity(profile.city || "");
+            setState(profile.state || "");
+            setZipCode(profile.zipCode || "");
+            setBio(profile.bio || "");
+            
+            // Pre-populate professional details
+            setYearsExperience(profile.yearsExperience || "");
+            setHasInsurance(profile.hasInsurance || false);
+            setInsuranceProvider(profile.insuranceProvider || "");
+            setHasVehicle(profile.hasVehicle || false);
+            setHasEquipment(profile.hasEquipment || false);
+            setCertifications(profile.certifications || "");
+            
+            // Pre-populate services
+            if (profile.services && profile.services.length > 0) {
+              setServices((prev) => {
+                return prev.map((service) => {
+                  const existingService = profile.services.find(
+                    (s: any) => s.serviceName === service.name
+                  );
+                  if (existingService) {
+                    // Convert cents to dollars for display
+                    const rateInDollars = (existingService.pricePerHour / 100).toFixed(2);
+                    return {
+                      ...service,
+                      selected: true,
+                      rate: rateInDollars,
+                    };
+                  }
+                  return service;
+                });
+              });
+            }
+            
+            // Pre-populate availability
+            if (profile.availability && profile.availability.length > 0) {
+              setAvailability((prev) => {
+                return prev.map((slot) => {
+                  const existingSlot = profile.availability.find(
+                    (a: any) => a.dayOfWeek === slot.day.toUpperCase()
+                  );
+                  if (existingSlot) {
+                    return {
+                      ...slot,
+                      enabled: existingSlot.isAvailable || false,
+                      startTime: existingSlot.startTime || slot.startTime,
+                      endTime: existingSlot.endTime || slot.endTime,
+                    };
+                  }
+                  return slot;
+                });
+              });
+            }
+            
+            // Pre-populate settings (if available in profile)
+            // Note: These might not be in the profile response, so we keep defaults
+          }
+        } catch (err) {
+          console.error('Error loading existing profile:', err);
+          // If profile can't be loaded, still allow editing with empty form
+        } finally {
+          setLoadingProfileData(false);
+        }
+      }
+    };
+    
+    loadExistingProfile();
+  }, [user, token, profileComplete, profileLoading]);
+
   const handleServiceToggle = (index: number) => {
     setServices((prev) => {
-      const copy = [...prev];
-      copy[index].selected = !copy[index].selected;
-      return copy;
+      return prev.map((service, i) => {
+        if (i === index) {
+          return { ...service, selected: !service.selected };
+        }
+        return service;
+      });
     });
   };
 
@@ -109,9 +208,12 @@ const ProviderProfileSetup: React.FC = () => {
 
   const handleAvailabilityToggle = (index: number) => {
     setAvailability((prev) => {
-      const copy = [...prev];
-      copy[index].enabled = !copy[index].enabled;
-      return copy;
+      return prev.map((slot, i) => {
+        if (i === index) {
+          return { ...slot, enabled: !slot.enabled };
+        }
+        return slot;
+      });
     });
   };
 
@@ -186,11 +288,12 @@ const ProviderProfileSetup: React.FC = () => {
       });
 
       if (response.data.success) {
-        // Show success message
-        alert('🎉 Profile created successfully!\n\n✅ You are now visible to customers searching for cleaning services\n✅ You can start accepting bookings immediately\n✅ Customers in your area can find and book you');
-        navigate('/provider/dashboard');
+        // Show success modal
+        setShowSuccessModal(true);
+        // Update edit mode status after successful save
+        setIsEditMode(true);
       } else {
-        setError('Failed to create profile. Please try again.');
+        setError('Failed to save profile. Please try again.');
       }
     } catch (err: any) {
       console.error('Profile creation error:', err);
@@ -198,13 +301,50 @@ const ProviderProfileSetup: React.FC = () => {
       console.error('Full error object:', JSON.stringify(err.response?.data, null, 2));
       
       if (err.response?.data?.details) {
-        // Zod validation errors - show detailed message
+        // Zod validation errors - convert to user-friendly messages
         const validationErrors = err.response.data.details;
         console.error('Validation errors:', validationErrors);
-        const errorMessages = validationErrors.map((e: any) => 
-          `${e.path.join('.')}: ${e.message}`
-        ).join('\n');
-        setError(`Validation errors:\n${errorMessages}`);
+        
+        // Map technical field names to user-friendly labels
+        const fieldLabels: { [key: string]: string } = {
+          'basicInfo.phone': 'Phone number',
+          'basicInfo.address': 'Street address',
+          'basicInfo.city': 'City',
+          'basicInfo.state': 'State',
+          'basicInfo.zipCode': 'Zip code',
+          'basicInfo.bio': 'Bio / About you',
+          'basicInfo.fullName': 'Full name',
+          'professional.yearsExperience': 'Years of experience',
+          'professional.insuranceProvider': 'Insurance provider',
+          'services': 'Services',
+          'availability': 'Availability',
+        };
+        
+        // Convert technical errors to user-friendly messages
+        const errorMessages = validationErrors.map((e: any) => {
+          const fieldPath = e.path.join('.');
+          const fieldLabel = fieldLabels[fieldPath] || fieldPath.replace(/([A-Z])/g, ' $1').trim();
+          
+          // Convert technical messages to user-friendly ones
+          let userMessage = '';
+          if (e.message.includes('Too small') || e.message.includes('>=1 characters')) {
+            userMessage = `${fieldLabel} is required`;
+          } else if (e.message.includes('Required')) {
+            userMessage = `${fieldLabel} is required`;
+          } else if (e.message.includes('Invalid')) {
+            userMessage = `${fieldLabel} is invalid`;
+          } else {
+            userMessage = `${fieldLabel}: ${e.message}`;
+          }
+          
+          return userMessage;
+        });
+        
+        // Format error messages with bullet points
+        const formattedErrors = errorMessages.length === 1 
+          ? errorMessages[0] 
+          : `Please fix the following:\n• ${errorMessages.join('\n• ')}`;
+        setError(formattedErrors);
       } else if (err.response?.data?.error) {
         // Show backend error message
         setError(`Error: ${err.response.data.error}`);
@@ -458,14 +598,18 @@ const ProviderProfileSetup: React.FC = () => {
                   className="border border-gray-300 rounded-lg p-4 hover:border-indigo-500 transition-colors"
                 >
                   <div className="flex items-center justify-between">
-                    <label className="flex items-center flex-1">
+                    <label htmlFor={`service-${index}`} className="flex items-center flex-1 cursor-pointer">
                       <input
                         type="checkbox"
                         checked={service.selected}
-                        onChange={() => handleServiceToggle(index)}
-                        className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                        onChange={(e) => {
+                          e.stopPropagation();
+                          handleServiceToggle(index);
+                        }}
+                        className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded cursor-pointer"
+                        id={`service-${index}`}
                       />
-                      <span className="ml-3 text-sm font-medium text-gray-900">
+                      <span className="ml-3 text-sm font-medium text-gray-900 cursor-pointer">
                         {service.name}
                       </span>
                     </label>
@@ -516,14 +660,18 @@ const ProviderProfileSetup: React.FC = () => {
               {availability.map((slot, index) => (
                 <div key={slot.day} className="border border-gray-300 rounded-lg p-4">
                   <div className="flex items-center justify-between flex-wrap gap-4">
-                    <label className="flex items-center">
+                    <label htmlFor={`availability-${index}`} className="flex items-center cursor-pointer">
                       <input
                         type="checkbox"
                         checked={slot.enabled}
-                        onChange={() => handleAvailabilityToggle(index)}
-                        className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                        onChange={(e) => {
+                          e.stopPropagation();
+                          handleAvailabilityToggle(index);
+                        }}
+                        className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded cursor-pointer"
+                        id={`availability-${index}`}
                       />
-                      <span className="ml-3 text-sm font-medium text-gray-900 w-24">
+                      <span className="ml-3 text-sm font-medium text-gray-900 w-24 cursor-pointer">
                         {slot.day}
                       </span>
                     </label>
@@ -689,16 +837,30 @@ const ProviderProfileSetup: React.FC = () => {
     }
   };
 
+  // Show loading state while checking profile status or loading existing data
+  if (profileLoading || loadingProfileData) {
+    return (
+      <div className="min-h-screen bg-gray-50 py-8 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading profile...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-gray-900 mb-2">
-            Complete Your Provider Profile
+            {isEditMode ? "Edit Your Provider Profile" : "Complete Your Provider Profile"}
           </h1>
           <p className="text-lg text-gray-600">
-            Let’s get you set up to start accepting bookings
+            {isEditMode 
+              ? "Update your profile information to keep it current"
+              : "Let's get you set up to start accepting bookings"}
           </p>
         </div>
 
@@ -723,7 +885,7 @@ const ProviderProfileSetup: React.FC = () => {
         {/* Error Alert */}
         {error && (
           <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-            <p className="text-red-800 font-medium">{error}</p>
+            <p className="text-red-800 font-medium whitespace-pre-line">{error}</p>
           </div>
         )}
 
@@ -767,7 +929,7 @@ const ProviderProfileSetup: React.FC = () => {
                   ) : (
                     <>
                       <FaCheckCircle className="mr-2" />
-                      Complete Profile
+                      {isEditMode ? "Save Changes" : "Complete Profile"}
                     </>
                   )}
                 </button>
@@ -796,6 +958,50 @@ const ProviderProfileSetup: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* Success Modal */}
+      <Modal
+        isOpen={showSuccessModal}
+        onClose={() => setShowSuccessModal(false)}
+        title={isEditMode ? "Profile Updated Successfully!" : "Profile Created Successfully!"}
+        size="md"
+      >
+        <div className="text-center">
+          <div className="mb-4">
+            <FaCheckCircle className="mx-auto text-green-500 text-6xl mb-4" />
+          </div>
+          <p className="text-lg text-gray-700 mb-6">
+            {isEditMode 
+              ? "Your profile has been updated successfully!" 
+              : "Your profile has been created successfully!"}
+          </p>
+          <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6 text-left">
+            <ul className="space-y-2 text-sm text-gray-700">
+              <li className="flex items-start">
+                <FaCheckCircle className="text-green-500 mr-2 mt-0.5 flex-shrink-0" />
+                <span>You are now visible to customers searching for cleaning services</span>
+              </li>
+              <li className="flex items-start">
+                <FaCheckCircle className="text-green-500 mr-2 mt-0.5 flex-shrink-0" />
+                <span>You can start accepting bookings immediately</span>
+              </li>
+              <li className="flex items-start">
+                <FaCheckCircle className="text-green-500 mr-2 mt-0.5 flex-shrink-0" />
+                <span>Customers in your area can find and book you</span>
+              </li>
+            </ul>
+          </div>
+          <button
+            onClick={() => {
+              setShowSuccessModal(false);
+              navigate('/provider/dashboard');
+            }}
+            className="w-full px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-semibold"
+          >
+            Go to Dashboard
+          </button>
+        </div>
+      </Modal>
     </div>
   );
 };

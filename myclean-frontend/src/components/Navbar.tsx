@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useProviderProfile } from '../hooks/useProviderProfile';
 import { FaBars, FaTimes, FaUser, FaCalendar, FaChartBar, FaSignOutAlt, FaBell } from 'react-icons/fa';
 import axios from 'axios';
 
@@ -16,6 +17,7 @@ interface Notification {
 
 const Navbar: React.FC = () => {
   const { user, logout } = useAuth();
+  const { profileComplete } = useProviderProfile();
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
@@ -167,7 +169,11 @@ const Navbar: React.FC = () => {
                   </div>
                   
                   {user.role === 'PROVIDER' ? (
-                    <Link to="/provider/profile-setup" className="text-gray-700 hover:text-indigo-600 px-3 py-2 rounded-md text-sm font-medium flex items-center">
+                    <Link 
+                      to="/provider/profile-setup" 
+                      className="text-gray-700 hover:text-indigo-600 px-3 py-2 rounded-md text-sm font-medium flex items-center"
+                      title={profileComplete ? "Edit Profile" : "Complete Profile"}
+                    >
                       <FaUser className="mr-2" /> {user.name}
                     </Link>
                   ) : (
