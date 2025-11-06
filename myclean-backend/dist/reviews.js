@@ -137,3 +137,4 @@ router.get("/provider/:providerId", async (req, res) => {
     }
 });
 exports.default = router;
+//# sourceMappingURL=reviews.js.map

@@ -8,7 +8,6 @@ const cors_1 = __importDefault(require("cors"));
 const express_1 = __importDefault(require("express"));
 const helmet_1 = __importDefault(require("helmet"));
 const http_1 = require("http");
-const socket_io_1 = require("socket.io");
 const prisma_1 = require("./prisma");
 const auth_1 = __importDefault(require("./auth"));
 const bookings_1 = __importDefault(require("./bookings"));
@@ -16,8 +15,12 @@ const reviews_1 = __importDefault(require("./reviews"));
 const servicesRoute_1 = __importDefault(require("./servicesRoute"));
 const providers_1 = __importDefault(require("./providers"));
 const middleware_1 = require("./middleware");
+const socket_1 = require("./socket");
 const app = (0, express_1.default)();
 const httpServer = (0, http_1.createServer)(app);
+// Initialize Socket.IO
+const io = (0, socket_1.initializeSocket)(httpServer);
+console.log("🔌 Socket.IO initialized");
 app.use((0, helmet_1.default)());
 // CORS configuration - accept multiple origins
 const allowedOrigins = [
@@ -49,68 +52,6 @@ app.use((0, cors_1.default)({
     },
     credentials: true,
 }));
-const io = new socket_io_1.Server(httpServer, {
-    cors: {
-        origin: (origin, callback) => {
-            if (!origin) {
-                return callback(null, true);
-            }
-            if (allowedOrigins.includes(origin) || isVercelDomain(origin)) {
-                return callback(null, true);
-            }
-            return callback(new Error(`Socket origin not allowed: ${origin}`));
-        },
-        credentials: true,
-    },
-});
-const connectedUsers = new Map();
-io.use((socket, next) => {
-    const rawUserId = (socket.handshake.auth?.userId ?? socket.handshake.query.userId);
-    if (!rawUserId) {
-        return next(new Error("Missing userId"));
-    }
-    const userId = Number(rawUserId);
-    if (!Number.isFinite(userId)) {
-        return next(new Error("Invalid userId"));
-    }
-    socket.data.userId = userId;
-    next();
-});
-const registerSocket = (userId, socketId) => {
-    const sockets = connectedUsers.get(userId) ?? new Set();
-    sockets.add(socketId);
-    connectedUsers.set(userId, sockets);
-};
-const unregisterSocket = (userId, socketId) => {
-    const sockets = connectedUsers.get(userId);
-    if (!sockets)
-        return;
-    sockets.delete(socketId);
-    if (sockets.size === 0) {
-        connectedUsers.delete(userId);
-    }
-};
-const emitMessage = (message) => {
-    const deliver = (userId) => {
-        const sockets = connectedUsers.get(userId);
-        if (!sockets)
-            return;
-        for (const socketId of sockets) {
-            io.to(socketId).emit("message:new", message);
-        }
-    };
-    deliver(message.receiverId);
-    if (message.senderId !== message.receiverId) {
-        deliver(message.senderId);
-    }
-};
-io.on("connection", (socket) => {
-    const userId = socket.data.userId;
-    registerSocket(userId, socket.id);
-    socket.on("disconnect", () => {
-        unregisterSocket(userId, socket.id);
-    });
-});
 app.use(express_1.default.json());
 app.get("/api/health", (_req, res) => res.json({ ok: true }));
 app.use("/api/auth", auth_1.default);
@@ -236,16 +177,29 @@ app.post("/api/messages", async (req, res) => {
                 link: `/my-bookings`,
             },
         });
-        emitMessage(payload);
+        // Emit message to socket room
+        io.to(`booking_${bookingId}`).emit("receive_message", {
+            id: messageRecord.id,
+            bookingId: messageRecord.bookingId,
+            senderId: messageRecord.senderId,
+            receiverId: messageRecord.receiverId,
+            content: messageRecord.content,
+            createdAt: messageRecord.createdAt.toISOString(),
+            isRead: messageRecord.isRead,
+            sender: messageRecord.sender,
+        });
         res.status(201).json({ success: true, message: payload });
     }
     catch (error) {
+        console.error("Failed to send message:", error);
         res.status(500).json({ error: "Failed to send message" });
     }
 });
 const port = Number(process.env.PORT || 4000);
 httpServer.listen(port, "0.0.0.0", () => {
     console.log(`🚀 MyClean Backend API running on port ${port}`);
+    console.log(`🔌 WebSocket server running on same port`);
     console.log(`📊 Environment: ${process.env.NODE_ENV || "development"}`);
     console.log(`✅ Health check: http://localhost:${port}/api/health`);
 });
+//# sourceMappingURL=index.js.map

@@ -19,6 +19,24 @@ const httpServer = createServer(app);
 const io = initializeSocket(httpServer);
 console.log("🔌 Socket.IO initialized");
 
+type MessageParticipant = {
+  id: number;
+  name: string | null;
+  profileImage: string | null;
+};
+
+type MessagePayload = {
+  id: number;
+  bookingId: number;
+  senderId: number;
+  receiverId: number;
+  content: string;
+  isRead: boolean;
+  createdAt: string;
+  sender: MessageParticipant;
+  receiver: MessageParticipant;
+};
+
 app.use(helmet());
 
 // CORS configuration - accept multiple origins
@@ -215,7 +233,8 @@ app.post("/api/messages", async (req: Request, res: Response) => {
     });
 
     res.status(201).json({ success: true, message: payload });
-  } catch (error) {
+  } catch (error: unknown) {
+    console.error("Failed to send message:", error);
     res.status(500).json({ error: "Failed to send message" });
   }
 });

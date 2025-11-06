@@ -1,9 +1,52 @@
 // src/providers.ts
 import { Router, Request, Response } from "express";
+import { z } from "zod";
 import { prisma } from "./prisma";
 import { authenticateToken, AuthRequest } from "./middleware";
 
 const router = Router();
+
+const profileSchema = z.object({
+  userId: z.number(),
+  basicInfo: z.object({
+    fullName: z.string().min(1),
+    phone: z.string().min(1),
+    address: z.string().min(1),
+    city: z.string().min(1),
+    state: z.string().min(1),
+    zipCode: z.string().min(1),
+    bio: z.string().min(1),
+  }),
+  professional: z.object({
+    yearsExperience: z.string().min(1),
+    hasInsurance: z.boolean(),
+    insuranceProvider: z.string().optional(),
+    hasVehicle: z.boolean(),
+    hasEquipment: z.boolean(),
+    certifications: z.string().optional(),
+  }),
+  services: z.array(
+    z.object({
+      name: z.string(),
+      rate: z.string(),
+      selected: z.boolean(),
+    }),
+  ),
+  availability: z.array(
+    z.object({
+      day: z.string(),
+      enabled: z.boolean(),
+      startTime: z.string(),
+      endTime: z.string(),
+    }),
+  ),
+  settings: z.object({
+    maxBookingsPerDay: z.string(),
+    advanceBookingDays: z.string(),
+  }),
+});
+
+type ProviderProfilePayload = z.infer<typeof profileSchema>;
 
 /* ---------- PUBLIC: list providers (you already have this) ---------- */
 router.get("/", async (_req: Request, res: Response) => {
@@ -201,44 +244,8 @@ router.post("/profile", async (req, res) => {
     console.log("=== RECEIVED PROFILE DATA ===");
     console.log("Request body:", JSON.stringify(req.body, null, 2));
     console.log("=== END RECEIVED DATA ===");
-    
-    const profileSchema = z.object({
-      userId: z.number(),
-      basicInfo: z.object({
-        fullName: z.string().min(1),
-        phone: z.string().min(1),
-        address: z.string().min(1),
-        city: z.string().min(1),
-        state: z.string().min(1),
-        zipCode: z.string().min(1),
-        bio: z.string().min(1),
-      }),
-      professional: z.object({
-        yearsExperience: z.string().min(1),
-        hasInsurance: z.boolean(),
-        insuranceProvider: z.string().optional(),
-        hasVehicle: z.boolean(),
-        hasEquipment: z.boolean(),
-        certifications: z.string().optional(),
-      }),
-      services: z.array(z.object({
-        name: z.string(),
-        rate: z.string(),
-        selected: z.boolean(),
-      })),
-      availability: z.array(z.object({
-        day: z.string(),
-        enabled: z.boolean(),
-        startTime: z.string(),
-        endTime: z.string(),
-      })),
-      settings: z.object({
-        maxBookingsPerDay: z.string(),
-        advanceBookingDays: z.string(),
-      }),
-    });
 
-    const validatedData = profileSchema.parse(req.body);
+    const validatedData: ProviderProfilePayload = profileSchema.parse(req.body);
 
     // Update user's name and phone
     await prisma.user.update({
@@ -297,10 +304,12 @@ router.post("/profile", async (req, res) => {
     });
 
     // Create services
-    const selectedServices = validatedData.services.filter(s => s.selected && s.rate);
+    const selectedServices = validatedData.services.filter(
+      (service) => service.selected && service.rate,
+    );
     if (selectedServices.length > 0) {
       await prisma.providerService.createMany({
-        data: selectedServices.map(service => ({
+        data: selectedServices.map((service) => ({
           providerId: profile.id,
           serviceName: service.name,
           pricePerHour: Math.round(parseFloat(service.rate) * 100), // Convert to cents
@@ -311,14 +320,16 @@ router.post("/profile", async (req, res) => {
     }
 
     // Create availability
-    const enabledDays = validatedData.availability.filter(a => a.enabled);
+    const enabledDays = validatedData.availability.filter(
+      (availability) => availability.enabled,
+    );
     if (enabledDays.length > 0) {
       await prisma.providerAvailability.createMany({
-        data: enabledDays.map(avail => ({
+        data: enabledDays.map((availability) => ({
           providerId: profile.id,
-          dayOfWeek: avail.day.toUpperCase(),
-          startTime: avail.startTime,
-          endTime: avail.endTime,
+          dayOfWeek: availability.day.toUpperCase(),
+          startTime: availability.startTime,
+          endTime: availability.endTime,
           isAvailable: true,
         })),
       });
@@ -346,13 +357,13 @@ router.post("/profile", async (req, res) => {
       message: "Profile created successfully!",
       profile: completeProfile,
     });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("Profile creation error:", error);
     if (error instanceof z.ZodError) {
-      console.error("Zod validation errors:", JSON.stringify(error.errors, null, 2));
+      console.error("Zod validation issues:", JSON.stringify(error.issues, null, 2));
       return res.status(400).json({ 
         error: "Invalid data", 
-        details: error.errors 
+        details: error.issues 
       });
     }
     res.status(500).json({ error: "Failed to create provider profile" });
