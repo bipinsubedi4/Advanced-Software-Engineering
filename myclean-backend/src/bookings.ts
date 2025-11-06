@@ -1,8 +1,4 @@
-<<<<<<< HEAD
 import { Router, Request, Response } from "express";
-=======
-import { Router } from "express";
->>>>>>> 2e7ee9dae34276da5be7964861c4ac9c478240b2
 import { prisma } from "./prisma";
 import { z } from "zod";
 
@@ -25,11 +21,7 @@ const createBookingSchema = z.object({
 });
 
 // Create a new booking
-<<<<<<< HEAD
 router.post("/", async (req: Request, res: Response) => {
-=======
-router.post("/", async (req, res) => {
->>>>>>> 2e7ee9dae34276da5be7964861c4ac9c478240b2
   try {
     const parsed = createBookingSchema.safeParse(req.body);
     
@@ -129,11 +121,7 @@ router.post("/", async (req, res) => {
 });
 
 // Get bookings for a user (customer or provider)
-<<<<<<< HEAD
 router.get("/user/:userId", async (req: Request, res: Response) => {
-=======
-router.get("/user/:userId", async (req, res) => {
->>>>>>> 2e7ee9dae34276da5be7964861c4ac9c478240b2
   try {
     const { userId } = req.params;
     const { role, status } = req.query;
@@ -171,11 +159,7 @@ router.get("/user/:userId", async (req, res) => {
       orderBy: { bookingDate: "desc" },
     });
 
-<<<<<<< HEAD
     const formattedBookings = bookings.map((booking) => ({
-=======
-    const formattedBookings = bookings.map(booking => ({
->>>>>>> 2e7ee9dae34276da5be7964861c4ac9c478240b2
       id: booking.id,
       bookingDate: booking.bookingDate,
       startTime: booking.startTime,
@@ -212,11 +196,7 @@ router.get("/user/:userId", async (req, res) => {
 });
 
 // Get single booking details
-<<<<<<< HEAD
 router.get("/:id", async (req: Request, res: Response) => {
-=======
-router.get("/:id", async (req, res) => {
->>>>>>> 2e7ee9dae34276da5be7964861c4ac9c478240b2
   try {
     const { id } = req.params;
 
@@ -281,11 +261,7 @@ router.get("/:id", async (req, res) => {
 });
 
 // Update booking status (accept/decline by provider, cancel by customer)
-<<<<<<< HEAD
 router.patch("/:id/status", async (req: Request, res: Response) => {
-=======
-router.patch("/:id/status", async (req, res) => {
->>>>>>> 2e7ee9dae34276da5be7964861c4ac9c478240b2
   try {
     const { id } = req.params;
     const { status, userId } = req.body;
@@ -374,11 +350,7 @@ router.patch("/:id/status", async (req, res) => {
 });
 
 // Delete/Cancel booking
-<<<<<<< HEAD
 router.delete("/:id", async (req: Request, res: Response) => {
-=======
-router.delete("/:id", async (req, res) => {
->>>>>>> 2e7ee9dae34276da5be7964861c4ac9c478240b2
   try {
     const { id } = req.params;
     const { userId } = req.body;
