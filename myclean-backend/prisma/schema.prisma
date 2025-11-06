@@ -59,6 +59,7 @@ model ProviderProfile {
   user              User                @relation(fields: [userId], references: [id], onDelete: Cascade)
   services          ProviderService[]
   availability      ProviderAvailability[]
+  blockedDates      ProviderBlockedDate[]
 }
 
 // Services offered by providers
@@ -86,9 +87,20 @@ model ProviderAvailability {
   startTime   String          // HH:MM format
   endTime     String          // HH:MM format
   isAvailable Boolean         @default(true)
-  
+
   // Relations
   provider    ProviderProfile @relation(fields: [providerId], references: [id], onDelete: Cascade)
+}
+
+model ProviderBlockedDate {
+  id         Int              @id @default(autoincrement())
+  providerId Int
+  date       DateTime
+  reason     String?
+
+  provider   ProviderProfile  @relation(fields: [providerId], references: [id], onDelete: Cascade)
+
+  @@index([providerId, date], name: "idx_provider_blocked_date")
 }
 
 // Bookings between customers and providers
@@ -165,4 +177,3 @@ model Message {
   sender     User     @relation("SentMessages", fields: [senderId], references: [id])
   receiver   User     @relation("ReceivedMessages", fields: [receiverId], references: [id])
 }
-

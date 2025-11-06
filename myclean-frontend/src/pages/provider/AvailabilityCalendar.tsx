@@ -46,10 +46,7 @@ const AvailabilityCalendar: React.FC = () => {
     }))
   );
 
-  const [blockedDates, setBlockedDates] = useState<BlockedDate[]>([
-    { id: 1, date: '2024-01-30', reason: 'Personal appointment' },
-    { id: 2, date: '2024-02-05', reason: 'Vacation' },
-  ]);
+  const [blockedDates, setBlockedDates] = useState<BlockedDate[]>([]);
 
   const toggleDayAvailability = (day: string) => {
     setWeeklyPattern(prev =>
@@ -342,4 +339,3 @@ const AvailabilityCalendar: React.FC = () => {
 };
 
 export default AvailabilityCalendar;
-

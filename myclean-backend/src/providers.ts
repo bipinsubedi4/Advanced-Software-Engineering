@@ -40,6 +40,14 @@ const profileSchema = z.object({
       endTime: z.string(),
     }),
   ),
+  blockedDates: z
+    .array(
+      z.object({
+        date: z.string().min(1),
+        reason: z.string().optional(),
+      }),
+    )
+    .optional(),
   settings: z.object({
     maxBookingsPerDay: z.string(),
     advanceBookingDays: z.string(),
@@ -56,6 +64,7 @@ router.get("/", async (_req: Request, res: Response) => {
       include: {
         user: { select: { id: true, name: true, profileImage: true } },
         services: true,
+        blockedDates: true,
       },
       orderBy: { averageRating: "desc" },
     });
@@ -75,6 +84,7 @@ router.get("/:id", async (req: Request, res: Response) => {
       include: {
         user: { select: { id: true, name: true, profileImage: true } },
         services: true,
+        blockedDates: true,
       },
     });
     if (!profile) return res.status(404).json({ error: "Profile not found" });
@@ -95,6 +105,7 @@ router.get("/me/profile", authenticateToken, async (req: Request, res: Response)
     include: {
       user: { select: { id: true, name: true, profileImage: true } },
       services: true,
+      blockedDates: true,
     },
   });
 
@@ -105,6 +116,7 @@ router.get("/me/profile", authenticateToken, async (req: Request, res: Response)
       include: {
         user: { select: { id: true, name: true, profileImage: true } },
         services: true,
+        blockedDates: true,
       },
     });
     return res.json({ success: true, profile: created });
@@ -228,6 +240,7 @@ router.post("/me/services", authenticateToken, async (req: Request, res: Respons
       include: {
         user: { select: { id: true, name: true, profileImage: true } },
         services: true,
+        blockedDates: true,
       },
     });
 
@@ -335,12 +348,29 @@ router.post("/profile", async (req, res) => {
       });
     }
 
+    // Replace blocked dates
+    await prisma.providerBlockedDate.deleteMany({
+      where: { providerId: profile.id },
+    });
+
+    const blockedDates = validatedData.blockedDates ?? [];
+    if (blockedDates.length > 0) {
+      await prisma.providerBlockedDate.createMany({
+        data: blockedDates.map((blocked) => ({
+          providerId: profile.id,
+          date: new Date(blocked.date),
+          reason: blocked.reason ?? null,
+        })),
+      });
+    }
+
     // Fetch complete profile with relations
     const completeProfile = await prisma.providerProfile.findUnique({
       where: { id: profile.id },
       include: {
         services: true,
         availability: true,
+        blockedDates: true,
         user: {
           select: {
             id: true,
@@ -380,6 +410,7 @@ router.get("/profile/:userId", async (req, res) => {
       include: {
         services: true,
         availability: true,
+        blockedDates: true,
         user: {
           select: {
             id: true,

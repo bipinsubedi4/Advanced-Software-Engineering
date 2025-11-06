@@ -36,6 +36,12 @@ const profileSchema = zod_1.z.object({
         startTime: zod_1.z.string(),
         endTime: zod_1.z.string(),
     })),
+    blockedDates: zod_1.z
+        .array(zod_1.z.object({
+        date: zod_1.z.string().min(1),
+        reason: zod_1.z.string().optional(),
+    }))
+        .optional(),
     settings: zod_1.z.object({
         maxBookingsPerDay: zod_1.z.string(),
         advanceBookingDays: zod_1.z.string(),
@@ -49,6 +55,7 @@ router.get("/", async (_req, res) => {
             include: {
                 user: { select: { id: true, name: true, profileImage: true } },
                 services: true,
+                blockedDates: true,
             },
             orderBy: { averageRating: "desc" },
         });
@@ -68,6 +75,7 @@ router.get("/:id", async (req, res) => {
             include: {
                 user: { select: { id: true, name: true, profileImage: true } },
                 services: true,
+                blockedDates: true,
             },
         });
         if (!profile)
@@ -89,6 +97,7 @@ router.get("/me/profile", middleware_1.authenticateToken, async (req, res) => {
         include: {
             user: { select: { id: true, name: true, profileImage: true } },
             services: true,
+            blockedDates: true,
         },
     });
     // if not found, create a basic one now (safety)
@@ -98,6 +107,7 @@ router.get("/me/profile", middleware_1.authenticateToken, async (req, res) => {
             include: {
                 user: { select: { id: true, name: true, profileImage: true } },
                 services: true,
+                blockedDates: true,
             },
         });
         return res.json({ success: true, profile: created });
@@ -201,6 +211,7 @@ router.post("/me/services", middleware_1.authenticateToken, async (req, res) => 
             include: {
                 user: { select: { id: true, name: true, profileImage: true } },
                 services: true,
+                blockedDates: true,
             },
         });
         res.json({ success: true, profile: refreshed });
@@ -295,12 +306,27 @@ router.post("/profile", async (req, res) => {
                 })),
             });
         }
+        // Replace blocked dates
+        await prisma_1.prisma.providerBlockedDate.deleteMany({
+            where: { providerId: profile.id },
+        });
+        const blockedDates = validatedData.blockedDates ?? [];
+        if (blockedDates.length > 0) {
+            await prisma_1.prisma.providerBlockedDate.createMany({
+                data: blockedDates.map((blocked) => ({
+                    providerId: profile.id,
+                    date: new Date(blocked.date),
+                    reason: blocked.reason ?? null,
+                })),
+            });
+        }
         // Fetch complete profile with relations
         const completeProfile = await prisma_1.prisma.providerProfile.findUnique({
             where: { id: profile.id },
             include: {
                 services: true,
                 availability: true,
+                blockedDates: true,
                 user: {
                     select: {
                         id: true,
@@ -338,6 +364,7 @@ router.get("/profile/:userId", async (req, res) => {
             include: {
                 services: true,
                 availability: true,
+                blockedDates: true,
                 user: {
                     select: {
                         id: true,

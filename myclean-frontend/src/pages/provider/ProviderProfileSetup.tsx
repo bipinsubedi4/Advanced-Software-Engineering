@@ -10,6 +10,8 @@ import {
   FaClock,
   FaMapMarkerAlt,
   FaCheckCircle,
+  FaPlus,
+  FaTrash,
 } from "react-icons/fa";
 import Card from "../../components/Card";
 import Modal from "../../components/Modal";
@@ -31,6 +33,12 @@ type Service = {
   name: string;
   rate: string; // dollars/hour in UI
   selected: boolean;
+};
+
+type BlockedDate = {
+  id: number;
+  date: string;
+  reason: string;
 };
 
 const ProviderProfileSetup: React.FC = () => {
@@ -86,6 +94,11 @@ const ProviderProfileSetup: React.FC = () => {
   ]);
   const [maxBookingsPerDay, setMaxBookingsPerDay] = useState("3");
   const [advanceBookingDays, setAdvanceBookingDays] = useState("30");
+
+  // Blocked dates
+  const [blockedDates, setBlockedDates] = useState<BlockedDate[]>([]);
+  const [blockedDateInput, setBlockedDateInput] = useState("");
+  const [blockedReasonInput, setBlockedReasonInput] = useState("");
 
   // Step 5: Photos & Documents (not sent in this version)
   const [profilePhoto, setProfilePhoto] = useState<File | null>(null);
@@ -171,6 +184,16 @@ const ProviderProfileSetup: React.FC = () => {
                 });
               });
             }
+
+            if (profile.blockedDates && profile.blockedDates.length > 0) {
+              setBlockedDates(
+                profile.blockedDates.map((blocked: any) => ({
+                  id: blocked.id,
+                  date: blocked.date ? blocked.date.slice(0, 10) : "",
+                  reason: blocked.reason || "",
+                }))
+              );
+            }
             
             // Pre-populate settings (if available in profile)
             // Note: These might not be in the profile response, so we keep defaults
@@ -229,6 +252,36 @@ const ProviderProfileSetup: React.FC = () => {
     });
   };
 
+  const addBlockedDate = () => {
+    if (!blockedDateInput) {
+      setError("Please choose a date to block");
+      return;
+    }
+
+    const exists = blockedDates.some((item) => item.date === blockedDateInput);
+    if (exists) {
+      setError("You have already blocked that date");
+      return;
+    }
+
+    setBlockedDates((prev) => [
+      ...prev,
+      {
+        id: Date.now(),
+        date: blockedDateInput,
+        reason: blockedReasonInput.trim(),
+      },
+    ]);
+
+    setBlockedDateInput("");
+    setBlockedReasonInput("");
+    setError(null);
+  };
+
+  const removeBlockedDate = (id: number) => {
+    setBlockedDates((prev) => prev.filter((item) => item.id !== id));
+  };
+
   const next = () => setCurrentStep((s) => Math.min(totalSteps, s + 1));
   const prev = () => setCurrentStep((s) => Math.max(1, s - 1));
 
@@ -271,6 +324,10 @@ const ProviderProfileSetup: React.FC = () => {
         },
         services,
         availability,
+        blockedDates: blockedDates.map((item) => ({
+          date: item.date,
+          reason: item.reason || undefined,
+        })),
         settings: { maxBookingsPerDay, advanceBookingDays },
       };
 
@@ -280,6 +337,7 @@ const ProviderProfileSetup: React.FC = () => {
       console.log('professional:', profileData.professional);
       console.log('services:', profileData.services);
       console.log('availability:', profileData.availability);
+      console.log('blockedDates:', profileData.blockedDates);
       console.log('settings:', profileData.settings);
       console.log('=== END PROFILE DATA ===');
 
@@ -742,6 +800,82 @@ const ProviderProfileSetup: React.FC = () => {
                 <p className="text-sm text-gray-500 mt-1">
                   How far in advance can customers book?
                 </p>
+              </div>
+            </div>
+
+            <div className="mt-8">
+              <h4 className="text-xl font-semibold text-gray-900 mb-2">Blocked Dates</h4>
+              <p className="text-gray-600 mb-4">
+                Add dates when you are unavailable. Customers cannot book you on blocked dates.
+              </p>
+
+              <div className="bg-white border border-gray-200 rounded-lg p-4 space-y-4">
+                <div className="flex flex-col md:flex-row md:items-end gap-4">
+                  <div className="flex-1">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Date</label>
+                    <input
+                      type="date"
+                      value={blockedDateInput}
+                      onChange={(e) => setBlockedDateInput(e.target.value)}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Reason (optional)</label>
+                    <input
+                      type="text"
+                      value={blockedReasonInput}
+                      onChange={(e) => setBlockedReasonInput(e.target.value)}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                      placeholder="Vacation, appointment, etc."
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={addBlockedDate}
+                    className="inline-flex items-center justify-center bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors"
+                  >
+                    <FaPlus className="mr-2" /> Block Date
+                  </button>
+                </div>
+
+                {blockedDates.length === 0 ? (
+                  <div className="border border-dashed border-gray-300 rounded-lg p-6 text-center text-gray-500">
+                    No blocked dates added yet.
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {blockedDates
+                      .slice()
+                      .sort((a, b) => a.date.localeCompare(b.date))
+                      .map((blocked) => (
+                        <div
+                          key={blocked.id}
+                          className="flex items-center justify-between bg-red-50 border border-red-200 p-4 rounded-lg"
+                        >
+                          <div>
+                            <p className="font-semibold text-gray-900">
+                              {new Date(`${blocked.date}T00:00:00`).toLocaleDateString(undefined, {
+                                year: "numeric",
+                                month: "long",
+                                day: "numeric",
+                              })}
+                            </p>
+                            {blocked.reason && (
+                              <p className="text-sm text-gray-600">{blocked.reason}</p>
+                            )}
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => removeBlockedDate(blocked.id)}
+                            className="text-red-600 hover:text-red-700 flex items-center"
+                          >
+                            <FaTrash className="mr-2" /> Remove
+                          </button>
+                        </div>
+                      ))}
+                  </div>
+                )}
               </div>
             </div>
           </div>
