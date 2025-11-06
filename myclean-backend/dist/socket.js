@@ -7,14 +7,35 @@ const prisma_1 = require("./prisma");
 // Track online users
 const onlineUsers = new Map();
 function initializeSocket(httpServer) {
+    const staticAllowedOrigins = new Set([
+        "http://localhost:3000",
+        "https://myclean-project.vercel.app",
+        "https://advanced-software-engineering-pi.vercel.app",
+        "https://advanced-software-engineering-orpin.vercel.app",
+    ]);
+    const additionalOrigins = (process.env.SOCKET_EXTRA_ORIGINS ?? "")
+        .split(",")
+        .map((origin) => origin.trim())
+        .filter(Boolean);
+    additionalOrigins.forEach((origin) => staticAllowedOrigins.add(origin));
+    const isAllowedOrigin = (origin) => {
+        if (!origin)
+            return true;
+        if (staticAllowedOrigins.has(origin))
+            return true;
+        if (origin.includes(".vercel.app"))
+            return true;
+        return false;
+    };
     const io = new socket_io_1.Server(httpServer, {
         cors: {
-            origin: [
-                "http://localhost:3000",
-                "https://myclean-project.vercel.app",
-                "https://advanced-software-engineering-pi.vercel.app",
-                "https://advanced-software-engineering-orpin.vercel.app",
-            ],
+            origin: (origin, callback) => {
+                if (isAllowedOrigin(origin)) {
+                    return callback(null, true);
+                }
+                console.warn(`Socket.IO CORS blocked origin: ${origin ?? "unknown"}`);
+                return callback(new Error(`Socket origin not allowed: ${origin}`));
+            },
             credentials: true,
         },
     });

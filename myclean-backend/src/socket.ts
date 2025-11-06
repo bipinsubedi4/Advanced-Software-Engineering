@@ -11,14 +11,37 @@ interface SocketUser {
 const onlineUsers: Map<number, string> = new Map();
 
 export function initializeSocket(httpServer: HTTPServer) {
+  const staticAllowedOrigins = new Set([
+    "http://localhost:3000",
+    "https://myclean-project.vercel.app",
+    "https://advanced-software-engineering-pi.vercel.app",
+    "https://advanced-software-engineering-orpin.vercel.app",
+  ]);
+
+  const additionalOrigins = (process.env.SOCKET_EXTRA_ORIGINS ?? "")
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+
+  additionalOrigins.forEach((origin) => staticAllowedOrigins.add(origin));
+
+  const isAllowedOrigin = (origin?: string | null): boolean => {
+    if (!origin) return true;
+    if (staticAllowedOrigins.has(origin)) return true;
+    if (origin.includes(".vercel.app")) return true;
+    return false;
+  };
+
   const io = new Server(httpServer, {
     cors: {
-      origin: [
-        "http://localhost:3000",
-        "https://myclean-project.vercel.app",
-        "https://advanced-software-engineering-pi.vercel.app",
-        "https://advanced-software-engineering-orpin.vercel.app",
-      ],
+      origin: (origin, callback) => {
+        if (isAllowedOrigin(origin)) {
+          return callback(null, true);
+        }
+
+        console.warn(`Socket.IO CORS blocked origin: ${origin ?? "unknown"}`);
+        return callback(new Error(`Socket origin not allowed: ${origin}`));
+      },
       credentials: true,
     },
   });
@@ -168,4 +191,3 @@ export function initializeSocket(httpServer: HTTPServer) {
 export function getOnlineUsers() {
   return Array.from(onlineUsers.keys());
 }
-
