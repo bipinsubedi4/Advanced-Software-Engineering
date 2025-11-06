@@ -22,6 +22,7 @@ import Payment from './pages/customer/Payment';
 import ProviderDashboard from './pages/provider/Dashboard';
 import ProviderLandingPage from './pages/provider/ProviderLandingPage';
 import ProviderProfileSetup from './pages/provider/ProviderProfileSetup';
+import YourProfile from './pages/provider/YourProfile';
 import AvailabilityCalendar from './pages/provider/AvailabilityCalendar';
 import MessagesRealtime from './pages/provider/MessagesRealtime';
 import PaymentTracking from './pages/provider/PaymentTracking';
@@ -80,6 +81,14 @@ function App() {
             />
 
             {/* Provider Routes */}
+            <Route
+              path="/provider/profile"
+              element={
+                <ProviderRoute>
+                  <YourProfile />
+                </ProviderRoute>
+              }
+            />
             <Route
               path="/provider/profile-setup"
               element={

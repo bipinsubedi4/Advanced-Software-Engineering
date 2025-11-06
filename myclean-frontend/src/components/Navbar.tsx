@@ -170,9 +170,9 @@ const Navbar: React.FC = () => {
                   
                   {user.role === 'PROVIDER' ? (
                     <Link 
-                      to="/provider/profile-setup" 
+                      to={profileComplete ? "/provider/profile" : "/provider/profile-setup"} 
                       className="text-gray-700 hover:text-indigo-600 px-3 py-2 rounded-md text-sm font-medium flex items-center"
-                      title={profileComplete ? "Edit Profile" : "Complete Profile"}
+                      title={profileComplete ? "View Profile" : "Complete Profile"}
                     >
                       <FaUser className="mr-2" /> {user.name}
                     </Link>
@@ -246,8 +246,11 @@ const Navbar: React.FC = () => {
                   </>
                 )}
                 {user.role === 'PROVIDER' && (
-                  <Link to="/provider/profile-setup" className="block text-gray-700 hover:bg-blue-50 px-3 py-2 rounded-md text-base font-medium">
-                    Edit Profile
+                  <Link 
+                    to={profileComplete ? "/provider/profile" : "/provider/profile-setup"} 
+                    className="block text-gray-700 hover:bg-blue-50 px-3 py-2 rounded-md text-base font-medium"
+                  >
+                    {profileComplete ? "My Profile" : "Complete Profile"}
                   </Link>
                 )}
                 <button
