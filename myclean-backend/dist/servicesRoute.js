@@ -48,3 +48,4 @@ router.get("/", async (_req, res) => {
     }
 });
 exports.default = router;
+//# sourceMappingURL=servicesRoute.js.map

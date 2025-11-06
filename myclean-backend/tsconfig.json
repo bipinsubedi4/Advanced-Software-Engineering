@@ -14,9 +14,13 @@
     "declarationMap": true,
     "sourceMap": true,
     "types": ["node"],
+<<<<<<< HEAD
     "typeRoots": ["./node_modules/@types"],
     "noImplicitAny": false,
     "forceConsistentCasingInFileNames": true
+=======
+    "typeRoots": ["./node_modules/@types"]
+>>>>>>> 2e7ee9dae34276da5be7964861c4ac9c478240b2
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist", "prisma"]

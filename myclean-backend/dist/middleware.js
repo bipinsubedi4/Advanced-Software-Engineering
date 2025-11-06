@@ -27,3 +27,4 @@ function authenticateToken(req, res, next) {
         return res.sendStatus(403);
     }
 }
+//# sourceMappingURL=middleware.js.map
