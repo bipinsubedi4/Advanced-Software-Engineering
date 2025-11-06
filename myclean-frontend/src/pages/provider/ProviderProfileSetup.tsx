@@ -10,10 +10,6 @@ import {
   FaClock,
   FaMapMarkerAlt,
   FaCheckCircle,
-  FaFilter,
-  FaTools,
-  FaShieldAlt,
-  FaCar,
 } from "react-icons/fa";
 import Card from "../../components/Card";
 import axios from "axios";
@@ -134,16 +130,9 @@ const ProviderProfileSetup: React.FC = () => {
   const next = () => setCurrentStep((s) => Math.min(totalSteps, s + 1));
   const prev = () => setCurrentStep((s) => Math.max(1, s - 1));
 
-<<<<<<< HEAD
-  const handlePrevious = () => {
-    if (currentStep > 1) {
-      setCurrentStep(currentStep - 1);
-    }
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!user) {
       setError('User not logged in');
       return;
@@ -192,7 +181,9 @@ const ProviderProfileSetup: React.FC = () => {
       console.log('settings:', profileData.settings);
       console.log('=== END PROFILE DATA ===');
 
-      const response = await axios.post(`${API_URL}/api/providers/profile`, profileData);
+      const response = await axios.post(`${API_BASE}/api/providers/profile`, profileData, {
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      });
 
       if (response.data.success) {
         // Show success message
@@ -222,69 +213,6 @@ const ProviderProfileSetup: React.FC = () => {
       }
     } finally {
       setLoading(false);
-=======
-  // === MAIN SUBMIT: saves to /api/providers/me/profile then /api/providers/me/services ===
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    try {
-      if (!token) {
-        alert("You must be logged in to save your profile. Please log in again.");
-        navigate("/login");
-        return;
-      }
-
-      // 1) Save core provider profile (including phone and name updates)
-      console.log("💾 Saving provider profile...");
-      await axios.post(`${API_BASE}/api/providers/me/profile`, {
-        bio,
-        yearsExperience,
-        hasInsurance,
-        insuranceProvider: hasInsurance ? insuranceProvider : null,
-        hasVehicle,
-        hasEquipment,
-        certifications,
-        address,
-        city,
-        state,
-        zipCode,
-        phone, // Save phone number to User table
-        name: fullName, // Update user's name if changed
-        isActive: true,
-      }, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      // 2) Save services (convert dollars -> cents)
-      const selected = services
-        .filter((s) => s.selected && s.rate.trim() !== "")
-        .map((s) => ({
-          serviceName: s.name,
-          pricePerHour: Math.round(Number(s.rate) * 100), // cents
-          durationMin: 60, // default; make configurable if you like
-        }));
-
-      console.log("💾 Saving provider services...", selected);
-      await axios.post(`${API_BASE}/api/providers/me/services`, { services: selected }, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      console.log("✅ Profile saved successfully!");
-      alert("Profile created successfully! Redirecting to dashboard...");
-      // Refresh the page to ensure profileComplete is updated
-      window.location.href = "/provider/home";
-    } catch (err: any) {
-      console.error("❌ Error saving profile:", err);
-      const errorMessage = err.response?.data?.error || err.message || "Unknown error";
-      console.error("Error details:", errorMessage);
-      alert(`Failed to save profile: ${errorMessage}. Please check the console for details.`);
->>>>>>> upstream/main
     }
   };
 
@@ -746,16 +674,9 @@ const ProviderProfileSetup: React.FC = () => {
                   )}
                 </div>
 
-<<<<<<< HEAD
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-6">
                   <p className="text-sm text-blue-800">
                     <strong>Note:</strong> Photos and documents are optional. You can complete your profile without them and start accepting bookings immediately. You can always upload them later to build more trust with customers.
-=======
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mt-6">
-                  <p className="text-sm text-yellow-800">
-                    <strong>Verification:</strong> Document upload is UI-only in this version.
-                    We’ll add file upload endpoints next.
->>>>>>> upstream/main
                   </p>
                 </div>
               </div>
@@ -799,7 +720,6 @@ const ProviderProfileSetup: React.FC = () => {
           </div>
         </div>
 
-<<<<<<< HEAD
         {/* Error Alert */}
         {error && (
           <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
@@ -808,9 +728,6 @@ const ProviderProfileSetup: React.FC = () => {
         )}
 
         {/* Form Card */}
-=======
-        {/* Form */}
->>>>>>> upstream/main
         <Card>
           <form
             onSubmit={currentStep === totalSteps ? handleSubmit : (e) => e.preventDefault()}
