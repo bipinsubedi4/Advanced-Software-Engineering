@@ -29,11 +29,13 @@
 
 ### 4. Add Environment Variables
 ```
-DATABASE_URL = [paste from step 2]
+DATABASE_URL = [paste Internal Database URL from step 2 - should start with postgresql://]
 JWT_SECRET = your-super-secret-jwt-key-123456
 NODE_ENV = production
 PORT = 4000
 ```
+
+**Important:** The `DATABASE_URL` must start with `postgresql://` (not `file:`). Copy the **Internal Database URL** from your PostgreSQL database.
 
 ### 5. Deploy & Wait (3 min)
 Click **Create Web Service** → Wait for build
