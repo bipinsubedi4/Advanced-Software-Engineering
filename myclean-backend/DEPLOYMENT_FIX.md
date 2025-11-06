@@ -65,6 +65,11 @@ The schema is now configured for PostgreSQL. Just make sure:
    npx prisma migrate deploy
    ```
 
+   **If you see a failed migration error (P3009):**
+   - See `MIGRATION_FIX.md` for detailed instructions
+   - Quick fix: `npx prisma migrate resolve --rolled-back 20251106045209_init`
+   - Then: `npx prisma db push --accept-data-loss`
+
 ## 🚀 Quick Deploy Checklist
 
 - [ ] Schema uses `provider = "postgresql"` ✅

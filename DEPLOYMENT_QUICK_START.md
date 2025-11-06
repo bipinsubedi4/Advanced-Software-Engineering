@@ -43,9 +43,17 @@ Click **Create Web Service** → Wait for build
 ### 6. Initialize Database (1 min)
 In Render Shell:
 ```bash
-npx prisma db push
+# If you see a failed migration error (P3009), run this first:
+npm run prisma:resolve
+
+# Otherwise, just push the schema:
+npx prisma db push --accept-data-loss
 npm run seed
 ```
+
+**If you see migration error P3009:**
+- Run `npm run prisma:resolve` to automatically fix it
+- Or manually: `npx prisma migrate resolve --rolled-back 20251106045209_init && npx prisma db push --accept-data-loss`
 
 ### 7. Test ✅
 Visit: `https://your-app.onrender.com/api/health`
