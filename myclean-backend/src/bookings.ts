@@ -68,11 +68,7 @@ router.post("/", async (req, res) => {
         state: data.state,
         zipCode: data.zipCode,
         specialInstructions: data.specialInstructions,
-<<<<<<< HEAD
         totalPrice: Math.round(data.totalPrice), // Already in cents from frontend
-=======
-        totalPrice: Math.round(data.totalPrice * 100), // Convert to cents
->>>>>>> 2e7ee9dae34276da5be7964861c4ac9c478240b2
         status: "PENDING",
         paymentStatus: "PENDING",
       },
