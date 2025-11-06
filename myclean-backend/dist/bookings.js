@@ -54,7 +54,7 @@ router.post("/", async (req, res) => {
                 state: data.state,
                 zipCode: data.zipCode,
                 specialInstructions: data.specialInstructions,
-                totalPrice: Math.round(data.totalPrice * 100), // Convert to cents
+                totalPrice: Math.round(data.totalPrice), // Already in cents from frontend
                 status: "PENDING",
                 paymentStatus: "PENDING",
             },
@@ -147,7 +147,7 @@ router.get("/user/:userId", async (req, res) => {
             },
             orderBy: { bookingDate: "desc" },
         });
-        const formattedBookings = bookings.map(booking => ({
+        const formattedBookings = bookings.map((booking) => ({
             id: booking.id,
             bookingDate: booking.bookingDate,
             startTime: booking.startTime,
