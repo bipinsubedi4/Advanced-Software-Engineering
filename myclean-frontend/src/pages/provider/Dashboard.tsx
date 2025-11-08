@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { FaCalendar, FaDollarSign, FaCheckCircle, FaClock, FaChartLine, FaStar, FaUserEdit, FaComments, FaBell } from 'react-icons/fa';
 import { useAuth } from '../../context/AuthContext';
 import Card from '../../components/Card';
+import Toast from '../../components/Toast';
 import { format } from 'date-fns';
 import axios from 'axios';
 
@@ -43,6 +44,7 @@ const ProviderDashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [stats, setStats] = useState({
     weeklyEarnings: 0,
     monthlyEarnings: 0,
@@ -106,6 +108,10 @@ const ProviderDashboard: React.FC = () => {
     }
   }, [user, fetchData]);
 
+  const showToast = (type: 'success' | 'error', message: string) => {
+    setToast({ type, message });
+  };
+
   const handleAccept = async (bookingId: number) => {
     if (!user) return;
 
@@ -115,10 +121,10 @@ const ProviderDashboard: React.FC = () => {
         userId: user.id,
       });
       fetchData(); // Refresh data
-      alert('Booking accepted successfully!');
+      showToast('success', 'Booking accepted successfully!');
     } catch (error) {
       console.error('Error accepting booking:', error);
-      alert('Failed to accept booking');
+      showToast('error', 'Failed to accept booking. Please try again.');
     }
   };
 
@@ -131,10 +137,10 @@ const ProviderDashboard: React.FC = () => {
         userId: user.id,
       });
       fetchData(); // Refresh data
-      alert('Booking declined');
+      showToast('success', 'Booking declined.');
     } catch (error) {
       console.error('Error declining booking:', error);
-      alert('Failed to decline booking');
+      showToast('error', 'Failed to decline booking. Please try again.');
     }
   };
 
@@ -154,6 +160,13 @@ const ProviderDashboard: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {toast && (
+        <Toast
+          type={toast.type}
+          message={toast.message}
+          onClose={() => setToast(null)}
+        />
+      )}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-3xl font-bold text-gray-900">Provider Dashboard</h1>
@@ -419,4 +432,3 @@ const ProviderDashboard: React.FC = () => {
 };
 
 export default ProviderDashboard;
-
