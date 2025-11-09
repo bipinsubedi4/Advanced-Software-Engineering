@@ -68,7 +68,7 @@ const Payment: React.FC = () => {
         last4: form.cardNumber.replace(/\s/g, '').slice(-4),
         notes: form.cardName,
       });
-      setStatusMessage('Payment recorded! We notified your cleaner.');
+      setStatusMessage('Payment recorded! Your booking is now confirmed.');
       setTimeout(() => navigate('/my-bookings'), 1200);
     } catch (err: any) {
       console.error('Mock payment failed', err);

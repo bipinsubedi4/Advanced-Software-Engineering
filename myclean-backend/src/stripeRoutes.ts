@@ -29,20 +29,21 @@ router.post("/mock/checkout", async (req, res) => {
       return res.status(404).json({ error: "Booking not found" });
     }
 
-    if (booking.status !== "ACCEPTED") {
-      return res.status(400).json({ error: "Booking must be accepted before payment" });
+    if (!["PENDING", "ACCEPTED"].includes(booking.status)) {
+      return res.status(400).json({ error: "This booking is not eligible for payment" });
     }
 
     if (booking.paymentStatus === "PAID") {
       return res.json({ success: true, paymentStatus: "PAID" });
     }
 
-    await prisma.booking.update({
+    const updatedBooking = await prisma.booking.update({
       where: { id: booking.id },
       data: {
         paymentStatus: "PAID",
         paymentCaptured: true,
         paymentIntentId: `mock-${Date.now()}`,
+        status: booking.status === "PENDING" ? "ACCEPTED" : booking.status,
       },
     });
 
@@ -67,7 +68,7 @@ router.post("/mock/checkout", async (req, res) => {
       });
     }
 
-    res.json({ success: true, paymentStatus: "PAID" });
+    res.json({ success: true, paymentStatus: "PAID", booking: { id: updatedBooking.id, status: updatedBooking.status } });
   } catch (error) {
     console.error("Mock payment failed", error);
     res.status(400).json({ error: "Unable to process mock payment" });

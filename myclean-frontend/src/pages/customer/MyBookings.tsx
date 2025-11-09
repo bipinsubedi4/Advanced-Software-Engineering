@@ -73,10 +73,13 @@ const formatCurrency = (value: number) => {
   return new Intl.NumberFormat('en-AU', { style: 'currency', currency: 'AUD' }).format(value);
 };
 
-const getStatusClass = (status: string) => {
-  switch (status) {
-    case 'PENDING':
+  const getStatusClass = (status: string, awaitingPayment: boolean) => {
+    if (awaitingPayment) {
       return 'bg-yellow-100 text-yellow-800';
+    }
+    switch (status) {
+      case 'PENDING':
+        return 'bg-yellow-100 text-yellow-800';
     case 'ACCEPTED':
       return 'bg-blue-100 text-blue-800';
     case 'COMPLETED':
@@ -103,8 +106,11 @@ const getPaymentStatusMeta = (status?: string) => {
   }
 };
 
-const statusLabel = (status: string) => {
-  switch (status) {
+  const statusLabel = (status: string, awaitingPayment: boolean) => {
+    if (awaitingPayment) {
+      return 'Awaiting payment';
+    }
+    switch (status) {
     case 'PENDING':
       return 'Pending';
     case 'ACCEPTED':
@@ -438,7 +444,7 @@ const MyBookings: React.FC = () => {
             {filteredBookings.map((booking) => {
               const paymentMeta = getPaymentStatusMeta(booking.paymentStatus);
               const requiresPayment =
-                booking.status === 'ACCEPTED' && booking.totalPrice > 0 && booking.paymentStatus !== 'PAID';
+                ['PENDING', 'ACCEPTED'].includes(booking.status) && booking.totalPrice > 0 && booking.paymentStatus !== 'PAID';
 
               return (
                 <Card key={booking.id}>
@@ -453,8 +459,8 @@ const MyBookings: React.FC = () => {
                     <div className="flex-1">
                       <div className="flex items-center justify-between mb-2">
                         <h3 className="text-xl font-semibold text-gray-900">{booking.provider.name}</h3>
-                        <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusClass(booking.status)}`}>
-                          {statusLabel(booking.status)}
+                        <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusClass(booking.status, requiresPayment)}`}>
+                          {statusLabel(booking.status, requiresPayment)}
                         </span>
                       </div>
 
