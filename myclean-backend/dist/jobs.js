@@ -1,15 +1,8 @@
 "use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const prisma_1 = require("./prisma");
 const zod_1 = require("zod");
-const stripe_1 = __importDefault(require("stripe"));
-const stripeClient = process.env.STRIPE_SECRET_KEY
-    ? new stripe_1.default(process.env.STRIPE_SECRET_KEY, { apiVersion: "2024-04-10" })
-    : null;
 const router = (0, express_1.Router)();
 const paramsSchema = zod_1.z.object({
     jobId: zod_1.z.string().regex(/^\d+$/).transform((val) => Number(val)),
@@ -144,21 +137,6 @@ router.post("/:jobId/complete", async (req, res) => {
             data: { status: "COMPLETED" },
             include: jobInclude,
         });
-        if (stripeClient && booking.paymentIntentId && !booking.paymentCaptured) {
-            try {
-                const intent = await stripeClient.paymentIntents.retrieve(booking.paymentIntentId);
-                if (intent.status === "requires_capture") {
-                    await stripeClient.paymentIntents.capture(booking.paymentIntentId);
-                }
-                await prisma_1.prisma.booking.update({
-                    where: { id: jobId },
-                    data: { paymentCaptured: true, paymentStatus: "PAID" },
-                });
-            }
-            catch (captureErr) {
-                console.error("Stripe capture failed", captureErr);
-            }
-        }
         await prisma_1.prisma.notification.create({
             data: {
                 userId: booking.customerId,

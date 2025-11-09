@@ -1,11 +1,6 @@
 import { Router } from "express";
 import { prisma } from "./prisma";
 import { z } from "zod";
-import Stripe from "stripe";
-
-const stripeClient = process.env.STRIPE_SECRET_KEY
-  ? new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: "2024-04-10" })
-  : null;
 
 const router = Router();
 
@@ -166,21 +161,6 @@ router.post("/:jobId/complete", async (req, res) => {
       data: { status: "COMPLETED" },
       include: jobInclude,
     });
-
-    if (stripeClient && booking.paymentIntentId && !booking.paymentCaptured) {
-      try {
-        const intent = await stripeClient.paymentIntents.retrieve(booking.paymentIntentId);
-        if (intent.status === "requires_capture") {
-          await stripeClient.paymentIntents.capture(booking.paymentIntentId);
-        }
-        await prisma.booking.update({
-          where: { id: jobId },
-          data: { paymentCaptured: true, paymentStatus: "PAID" },
-        });
-      } catch (captureErr) {
-        console.error("Stripe capture failed", captureErr);
-      }
-    }
 
     await prisma.notification.create({
       data: {

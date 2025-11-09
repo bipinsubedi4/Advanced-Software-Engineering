@@ -117,23 +117,3 @@ export const sendPaymentReceivedEmail = async ({
     `,
   });
 };
-
-export const sendPaymentFailedEmail = async ({
-  to,
-  customerName,
-}: {
-  to: string;
-  customerName: string;
-}) => {
-  await sendEmail({
-    to,
-    subject: "Payment attempt failed",
-    text: `Hi ${customerName}, your recent payment attempt failed. Please try another card from your bookings page.`,
-    html: `
-      <p>Hi ${customerName},</p>
-      <p>Your recent payment attempt did not go through.</p>
-      <p>Please try again from your bookings page. If the problem persists, contact support.</p>
-      <p>— The MyClean team</p>
-    `,
-  });
-};

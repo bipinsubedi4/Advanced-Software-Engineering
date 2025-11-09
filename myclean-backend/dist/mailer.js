@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.sendPaymentFailedEmail = exports.sendPaymentReceivedEmail = exports.sendPaymentReminderEmail = void 0;
+exports.sendPaymentReceivedEmail = exports.sendPaymentReminderEmail = void 0;
 const nodemailer_1 = __importDefault(require("nodemailer"));
 const { SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, EMAIL_FROM, EMAIL_ENABLED = "true", } = process.env;
 const isEmailEnabled = EMAIL_ENABLED !== "false" && SMTP_HOST && SMTP_USER && SMTP_PASS && EMAIL_FROM;
@@ -81,18 +81,4 @@ const sendPaymentReceivedEmail = async ({ to, providerName, customerName, servic
     });
 };
 exports.sendPaymentReceivedEmail = sendPaymentReceivedEmail;
-const sendPaymentFailedEmail = async ({ to, customerName, }) => {
-    await sendEmail({
-        to,
-        subject: "Payment attempt failed",
-        text: `Hi ${customerName}, your recent payment attempt failed. Please try another card from your bookings page.`,
-        html: `
-      <p>Hi ${customerName},</p>
-      <p>Your recent payment attempt did not go through.</p>
-      <p>Please try again from your bookings page. If the problem persists, contact support.</p>
-      <p>— The MyClean team</p>
-    `,
-    });
-};
-exports.sendPaymentFailedEmail = sendPaymentFailedEmail;
 //# sourceMappingURL=mailer.js.map

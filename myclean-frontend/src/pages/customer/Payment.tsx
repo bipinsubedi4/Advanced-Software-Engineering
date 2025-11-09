@@ -1,6 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { loadStripe } from '@stripe/stripe-js';
-import { Elements, PaymentElement, useElements, useStripe } from '@stripe/react-stripe-js';
+import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import Card from '../../components/Card';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -17,8 +15,6 @@ interface BookingSummary {
   city: string;
 }
 
-const stripePromise = loadStripe(process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY || '');
-
 const Payment: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -26,9 +22,15 @@ const Payment: React.FC = () => {
   const bookingIdParam = params.get('bookingId');
   const bookingId = bookingIdParam ? Number(bookingIdParam) : null;
   const [booking, setBooking] = useState<BookingSummary | null>(null);
-  const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [form, setForm] = useState({
+    cardName: '',
+    cardNumber: '4242 4242 4242 4242',
+    expiry: '12/28',
+    cvv: '123',
+  });
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     if (!bookingId) return;
@@ -44,27 +46,6 @@ const Payment: React.FC = () => {
     loadBooking();
   }, [bookingId]);
 
-  useEffect(() => {
-    if (!bookingId) return;
-    const createIntent = async () => {
-      try {
-        const response = await axios.post('/api/stripe/create-payment-intent', {
-          bookingId,
-        });
-        setClientSecret(response.data.clientSecret);
-      } catch (err) {
-        console.error('Create intent failed', err);
-        setError('Unable to initialise payment.');
-      }
-    };
-    createIntent();
-  }, [bookingId]);
-
-  const elementsOptions = useMemo(() => ({
-    clientSecret: clientSecret || undefined,
-    appearance: { theme: 'stripe' as const },
-  }), [clientSecret]);
-
   if (!bookingId) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -74,23 +55,35 @@ const Payment: React.FC = () => {
       </div>
     );
   }
-
-  if (!stripePromise) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <Card>
-          <p className="text-gray-700">Stripe publishable key is not configured.</p>
-        </Card>
-      </div>
-    );
-  }
+  const handleMockPayment = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!bookingId) return;
+    setSubmitting(true);
+    setStatusMessage(null);
+    setError(null);
+    try {
+      await axios.post('/api/stripe/mock/checkout', {
+        bookingId,
+        paymentMethod: 'MOCK_CARD',
+        last4: form.cardNumber.replace(/\s/g, '').slice(-4),
+        notes: form.cardName,
+      });
+      setStatusMessage('Payment recorded! We notified your cleaner.');
+      setTimeout(() => navigate('/my-bookings'), 1200);
+    } catch (err: any) {
+      console.error('Mock payment failed', err);
+      setError(err?.response?.data?.error || 'Unable to record payment.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Complete Payment</h1>
-          <p className="text-gray-600">Securely pay for your booking below.</p>
+          <p className="text-gray-600">Use the mock payment form below to mark your booking as paid.</p>
         </div>
 
         {error && <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">{error}</div>}
@@ -130,80 +123,64 @@ const Payment: React.FC = () => {
           </Card>
 
           <Card>
-            {!clientSecret ? (
-              <p className="text-gray-500">Preparing payment form…</p>
-            ) : (
-              <Elements stripe={stripePromise} options={elementsOptions}>
-                <CheckoutForm onStatus={setStatusMessage} bookingId={bookingId} onError={setError} onSuccess={() => navigate('/my-bookings')} />
-              </Elements>
-            )}
+            <form className="space-y-4" onSubmit={handleMockPayment}>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Name on card</label>
+                <input
+                  type="text"
+                  value={form.cardName}
+                  onChange={(e) => setForm((prev) => ({ ...prev, cardName: e.target.value }))}
+                  required
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                  placeholder="Alex Example"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Card number</label>
+                <input
+                  type="text"
+                  value={form.cardNumber}
+                  onChange={(e) => setForm((prev) => ({ ...prev, cardNumber: e.target.value }))}
+                  required
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                />
+                <p className="text-xs text-gray-500 mt-1">Use any test number—no real charges occur.</p>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Expiry</label>
+                  <input
+                    type="text"
+                    value={form.expiry}
+                    onChange={(e) => setForm((prev) => ({ ...prev, expiry: e.target.value }))}
+                    required
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">CVV</label>
+                  <input
+                    type="text"
+                    value={form.cvv}
+                    onChange={(e) => setForm((prev) => ({ ...prev, cvv: e.target.value }))}
+                    required
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                  />
+                </div>
+              </div>
+              <button
+                type="submit"
+                disabled={submitting}
+                className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-60"
+              >
+                {submitting ? 'Recording payment…' : 'Mark as paid'}
+              </button>
+              <p className="text-xs text-gray-500 text-center">This is a mock gateway for demo purposes only.</p>
+            </form>
           </Card>
         </div>
       </div>
     </div>
   );
 };
-
-interface CheckoutProps {
-  bookingId: number;
-  onStatus: (message: string | null) => void;
-  onError: (message: string | null) => void;
-  onSuccess: () => void;
-}
-
-const CheckoutForm: React.FC<CheckoutProps> = ({ bookingId, onStatus, onError, onSuccess }) => {
-  const stripe = useStripe();
-  const elements = useElements();
-  const [submitting, setSubmitting] = useState(false);
-
-  const handleSubmit = async (event: React.FormEvent) => {
-    event.preventDefault();
-    if (!stripe || !elements) return;
-    setSubmitting(true);
-    onStatus(null);
-    onError(null);
-    const result = await stripe.confirmPayment({
-      elements,
-      confirmParams: {
-        return_url: `${window.location.origin}/my-bookings`,
-      },
-    });
-
-    if (result.error) {
-      onError(result.error.message || 'Payment failed.');
-      setSubmitting(false);
-      return;
-    }
-
-    const paymentIntent = (result as { paymentIntent?: { status?: string } }).paymentIntent;
-    if (paymentIntent?.status === 'succeeded') {
-      try {
-        await axios.post('/api/stripe/confirm-payment', { bookingId });
-        onStatus('Payment successful! We notified your cleaner.');
-        onSuccess();
-      } catch (err: any) {
-        console.error('Confirm payment failed', err);
-        onError(err?.response?.data?.error || 'Payment succeeded but we could not update your booking. Please contact support.');
-      }
-    } else {
-      onStatus('Payment submitted. Awaiting confirmation.');
-    }
-    setSubmitting(false);
-  };
-
-  return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <PaymentElement />
-      <button
-        type="submit"
-        disabled={submitting || !stripe}
-        className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition-colors"
-      >
-        {submitting ? 'Processing…' : 'Pay now'}
-      </button>
-      <p className="text-xs text-gray-500 text-center">Secured by Stripe</p>
-    </form>
-  );
-};
-
 export default Payment;

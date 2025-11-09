@@ -1,9 +1,7 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { FaDollarSign, FaCalendar, FaDownload, FaChartBar, FaArrowUp, FaCheckCircle, FaExclamationTriangle } from 'react-icons/fa';
+import React, { useMemo, useState } from 'react';
+import { FaDollarSign, FaCalendar, FaDownload, FaChartBar, FaArrowUp, FaInfoCircle } from 'react-icons/fa';
 import Card from '../../components/Card';
 import { format, subDays } from 'date-fns';
-import axios from 'axios';
-import { useAuth } from '../../context/AuthContext';
 
 interface Transaction {
   id: number;
@@ -17,10 +15,6 @@ interface Transaction {
 
 const PaymentTracking: React.FC = () => {
   const [selectedPeriod, setSelectedPeriod] = useState<'week' | 'month' | 'year'>('month');
-  const [stripeStatus, setStripeStatus] = useState<'unlinked' | 'pending' | 'ready'>('unlinked');
-  const [connectLoading, setConnectLoading] = useState(false);
-  const [stripeError, setStripeError] = useState<string | null>(null);
-  const { user } = useAuth();
 
   const transactions: Transaction[] = useMemo(() => [
     {
@@ -96,48 +90,6 @@ const PaymentTracking: React.FC = () => {
     a.click();
   };
 
-  const fetchStripeStatus = useCallback(async () => {
-    if (!user) return;
-    try {
-      const response = await axios.get(`/api/providers/profile/${user.id}`);
-      const profile = response.data.profile;
-      if (profile.stripeAccountId && profile.stripeChargesEnabledAt) {
-        setStripeStatus('ready');
-      } else if (profile.stripeAccountId) {
-        setStripeStatus('pending');
-      } else {
-        setStripeStatus('unlinked');
-      }
-    } catch (err) {
-      console.error('Failed to load Stripe info', err);
-      setStripeError('Unable to load Stripe status.');
-    }
-  }, [user]);
-
-  useEffect(() => {
-    fetchStripeStatus();
-  }, [fetchStripeStatus]);
-
-  const startStripeOnboarding = async () => {
-    if (!user) return;
-    setConnectLoading(true);
-    setStripeError(null);
-    try {
-      const returnUrl = `${window.location.origin}/provider/payments`;
-      const response = await axios.post('/api/stripe/connect', {
-        providerId: user.id,
-        returnUrl,
-        refreshUrl: returnUrl,
-      });
-      window.location.href = response.data.url;
-    } catch (err) {
-      console.error('Stripe connect error', err);
-      setStripeError('Unable to start Stripe onboarding.');
-    } finally {
-      setConnectLoading(false);
-    }
-  };
-
   const nextPayoutDate = '2024-01-26';
   const nextPayoutAmount = transactions
     .filter((t) => t.status === 'completed' && t.payoutDate === nextPayoutDate)
@@ -156,28 +108,15 @@ const PaymentTracking: React.FC = () => {
           </button>
         </div>
 
-        <Card className="bg-white border border-gray-200">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <Card className="bg-blue-50 border border-blue-100">
+          <div className="flex items-start gap-4">
+            <FaInfoCircle className="text-blue-600 text-3xl" />
             <div>
-              <p className="text-sm text-gray-500">Stripe Connect status</p>
-              <p className="text-lg font-semibold text-gray-900 flex items-center">
-                {stripeStatus === 'ready' && <FaCheckCircle className="text-green-600 mr-2" />}
-                {stripeStatus === 'pending' && <FaExclamationTriangle className="text-yellow-500 mr-2" />}
-                {stripeStatus === 'ready'
-                  ? 'Connected · payouts enabled'
-                  : stripeStatus === 'pending'
-                  ? 'Onboarding in progress'
-                  : 'Not connected'}
+              <h2 className="text-lg font-semibold text-gray-900">Mock payouts enabled</h2>
+              <p className="text-sm text-blue-700">
+                This project uses a mock payment gateway for demonstrations, so you don’t need to connect a real Stripe account. When a customer marks a booking as paid, we automatically update the booking and notify you.
               </p>
-              {stripeError && <p className="text-sm text-red-600 mt-1">{stripeError}</p>}
             </div>
-            <button
-              onClick={startStripeOnboarding}
-              disabled={connectLoading}
-              className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 disabled:opacity-50"
-            >
-              {stripeStatus === 'ready' ? 'Manage Stripe account' : connectLoading ? 'Redirecting…' : 'Connect with Stripe'}
-            </button>
           </div>
         </Card>
 

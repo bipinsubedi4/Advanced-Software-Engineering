@@ -11,8 +11,4 @@ export declare const sendPaymentReceivedEmail: ({ to, providerName, customerName
     customerName: string;
     serviceName: string;
 }) => Promise<void>;
-export declare const sendPaymentFailedEmail: ({ to, customerName, }: {
-    to: string;
-    customerName: string;
-}) => Promise<void>;
 //# sourceMappingURL=mailer.d.ts.map
