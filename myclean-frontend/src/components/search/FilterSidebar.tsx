@@ -53,7 +53,6 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({ filters, onChange, onRese
           max={250}
           step={5}
           allowCross={false}
-          allowCross={false}
           onChange={(value) => {
             if (Array.isArray(value) && value.length === 2) {
               onChange({ priceRange: [value[0] as number, value[1] as number] });

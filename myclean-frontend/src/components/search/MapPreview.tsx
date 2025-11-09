@@ -6,20 +6,30 @@ type MapPreviewProps = {
   center?: { lat: number; lng: number } | null;
 };
 
+type ValidLocation = { id: number; lat: number; lng: number };
+
 const containerStyle: React.CSSProperties = {
   width: "100%",
   height: "360px",
   borderRadius: "1rem",
 };
 
+const isValidLocation = (location: MapPreviewProps["locations"][number]): location is ValidLocation =>
+  typeof location.lat === "number" && typeof location.lng === "number";
+
+const defaultCenter = { lat: -37.8136, lng: 144.9631 };
+
 const MapPreview: React.FC<MapPreviewProps> = ({ locations, center }) => {
   const apiKey = process.env.REACT_APP_GOOGLE_MAPS_API_KEY;
-  const hasValidData = Boolean(apiKey && locations.some((location) => typeof location.lat === "number" && typeof location.lng === "number"));
+  const hasValidData = Boolean(apiKey && locations.some(isValidLocation));
 
   const { isLoaded } = useJsApiLoader({
     id: "google-map-script",
     googleMapsApiKey: apiKey ?? "",
   });
+
+  const firstValidLocation = React.useMemo(() => locations.find(isValidLocation), [locations]);
+  const resolvedCenter = center ?? (firstValidLocation ? { lat: firstValidLocation.lat, lng: firstValidLocation.lng } : defaultCenter);
 
   if (!apiKey || !hasValidData) {
     return (
@@ -34,13 +44,7 @@ const MapPreview: React.FC<MapPreviewProps> = ({ locations, center }) => {
       {isLoaded ? (
         <GoogleMap
           mapContainerStyle={containerStyle}
-          center={
-            center ??
-            locations.find((location) => typeof location.lat === "number" && typeof location.lng === "number") ?? {
-              lat: -37.8136,
-              lng: 144.9631,
-            }
-          }
+          center={resolvedCenter}
           zoom={11}
           options={{
             disableDefaultUI: true,

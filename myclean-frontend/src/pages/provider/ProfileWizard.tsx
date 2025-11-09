@@ -312,6 +312,8 @@ const ProfileWizard: React.FC = () => {
                   city: formData.city,
                   state: formData.state,
                   zipCode: formData.zipCode,
+                  latitude: formData.latitude,
+                  longitude: formData.longitude,
                   serviceRadius: formData.serviceRadius,
                 }}
                 onChange={handleFieldUpdate}
