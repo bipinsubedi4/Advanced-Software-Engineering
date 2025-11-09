@@ -132,19 +132,52 @@ router.put("/me/profile", middleware_1.authenticateToken, async (req, res) => {
                     isProfileComplete: true,
                 },
             });
-            await tx.providerService.deleteMany({ where: { providerId: profile.id } });
             const services = normalizeServices(payload.services);
-            if (services.length) {
-                await tx.providerService.createMany({
-                    data: services.map((service) => ({
-                        providerId: profile.id,
-                        serviceName: service.name,
-                        description: `${service.category} service`,
-                        pricePerHour: 0,
-                        durationMin: 60,
-                        isActive: true,
-                    })),
-                });
+            const existingServices = await tx.providerService.findMany({
+                where: { providerId: profile.id },
+                include: { _count: { select: { bookings: true } } },
+            });
+            const incomingNames = new Set(services.map((service) => service.name.toLowerCase()));
+            const existingByName = new Map(existingServices.map((service) => [service.serviceName.toLowerCase(), service]));
+            for (const service of services) {
+                const key = service.name.toLowerCase();
+                const current = existingByName.get(key);
+                if (current) {
+                    await tx.providerService.update({
+                        where: { id: current.id },
+                        data: {
+                            serviceName: service.name,
+                            description: `${service.category} service`,
+                            isActive: true,
+                        },
+                    });
+                }
+                else {
+                    await tx.providerService.create({
+                        data: {
+                            providerId: profile.id,
+                            serviceName: service.name,
+                            description: `${service.category} service`,
+                            pricePerHour: 0,
+                            durationMin: 60,
+                            isActive: true,
+                        },
+                    });
+                }
+            }
+            for (const service of existingServices) {
+                const key = service.serviceName.toLowerCase();
+                if (incomingNames.has(key))
+                    continue;
+                if (service._count.bookings > 0) {
+                    await tx.providerService.update({
+                        where: { id: service.id },
+                        data: { isActive: false },
+                    });
+                }
+                else {
+                    await tx.providerService.delete({ where: { id: service.id } });
+                }
             }
             await tx.providerAvailability.deleteMany({ where: { providerId: profile.id } });
             const availabilityData = payload.availability.flatMap((day) => day.blocks.map((block) => ({
