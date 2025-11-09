@@ -1,5 +1,5 @@
 // Component to protect provider routes and redirect to profile setup if incomplete
-import React, { useEffect } from 'react';
+import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useProviderProfile } from '../hooks/useProviderProfile';
@@ -38,4 +38,3 @@ const ProviderRoute: React.FC<ProviderRouteProps> = ({ children, allowIncomplete
 };
 
 export default ProviderRoute;
-

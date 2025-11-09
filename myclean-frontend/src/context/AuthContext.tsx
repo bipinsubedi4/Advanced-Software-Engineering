@@ -1,5 +1,5 @@
 // src/context/AuthContext.tsx
-import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import axiosBase, { AxiosError } from 'axios';
 
 type Role = 'CUSTOMER' | 'PROVIDER' | 'ADMIN';
@@ -69,7 +69,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setLoading(false);
   }, []);
 
-  const normalizeError = (err: unknown): Error => {
+  const normalizeError = useCallback((err: unknown): Error => {
     if (axiosBase.isAxiosError(err)) {
       const ae = err as AxiosError<any>;
       const msg =
@@ -80,9 +80,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return new Error(msg);
     }
     return new Error((err as Error)?.message || 'Request failed');
-  };
+  }, []);
 
-  const login = async (email: string, password: string) => {
+  const login = useCallback(async (email: string, password: string) => {
     try {
       const res = await api.post('/api/auth/login', { email, password });
       const { token: newToken, user: newUser } = res.data as { token: string; user: User };
@@ -94,9 +94,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (e) {
       throw normalizeError(e);
     }
-  };
+  }, [normalizeError]);
 
-  const register = async (name: string, email: string, password: string, role: Role) => {
+  const register = useCallback(async (name: string, email: string, password: string, role: Role) => {
     try {
       // Backend must return { token, user } OR we follow up with login.
       const res = await api.post('/api/auth/register', { name, email, password, role });
@@ -115,15 +115,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (e) {
       throw normalizeError(e);
     }
-  };
+  }, [login, normalizeError]);
 
-  const logout = () => {
+  const logout = useCallback(() => {
     setUser(null);
     setToken(null);
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     delete api.defaults.headers.common['Authorization'];
-  };
+  }, []);
 
   const isProvider = user?.role === 'PROVIDER';
   const isCustomer = user?.role === 'CUSTOMER';
@@ -141,7 +141,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       isCustomer,
       isAdmin,
     }),
-    [user, token, loading, isProvider, isCustomer, isAdmin]
+    [user, token, loading, login, register, logout, isProvider, isCustomer, isAdmin]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

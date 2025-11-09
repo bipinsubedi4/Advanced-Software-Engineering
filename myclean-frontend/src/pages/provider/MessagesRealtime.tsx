@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { FaPaperPlane, FaSearch, FaCircle, FaEllipsisV } from 'react-icons/fa';
 import { format } from 'date-fns';
 import { useAuth } from '../../context/AuthContext';
@@ -60,12 +60,7 @@ const MessagesRealtime: React.FC = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Fetch conversations
-  useEffect(() => {
-    fetchConversations();
-  }, [user]);
-
-  const fetchConversations = async () => {
+  const fetchConversations = useCallback(async () => {
     if (!user) return;
     
     try {
@@ -113,15 +108,23 @@ const MessagesRealtime: React.FC = () => {
       setConversations(validConversations);
 
       // Auto-select first conversation if none selected
-      if (!selectedBookingId && validConversations.length > 0) {
-        setSelectedBookingId(validConversations[0].booking.id);
-      }
+      setSelectedBookingId((prev) => {
+        if (prev || validConversations.length === 0) {
+          return prev;
+        }
+        return validConversations[0].booking.id;
+      });
     } catch (error) {
       console.error('Error fetching conversations:', error);
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
+
+  // Fetch conversations
+  useEffect(() => {
+    void fetchConversations();
+  }, [fetchConversations]);
 
   // Join booking room when conversation is selected
   useEffect(() => {
@@ -544,4 +547,3 @@ const MessagesRealtime: React.FC = () => {
 };
 
 export default MessagesRealtime;
-

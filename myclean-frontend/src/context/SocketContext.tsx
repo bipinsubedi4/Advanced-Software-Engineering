@@ -27,11 +27,14 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   useEffect(() => {
     if (!user) {
       // Disconnect socket if user logs out
-      if (socket) {
-        socket.disconnect();
-        setSocket(null);
-        setIsConnected(false);
-      }
+      setSocket((prev) => {
+        if (prev) {
+          prev.disconnect();
+        }
+        return null;
+      });
+      setIsConnected(false);
+      setOnlineUsers([]);
       return;
     }
 
@@ -87,4 +90,3 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     </SocketContext.Provider>
   );
 };
-
