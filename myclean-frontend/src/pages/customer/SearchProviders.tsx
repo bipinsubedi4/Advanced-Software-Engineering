@@ -8,6 +8,17 @@ import MapPreview from "../../components/search/MapPreview";
 
 const SERVICE_OPTIONS = ["Deep Clean", "Standard Clean", "Move-out Clean", "Oven Cleaning", "Window Washing", "Carpet Cleaning"];
 
+const API_BASE = (() => {
+  const raw = process.env.REACT_APP_API_URL;
+  if (!raw) return "";
+  return raw.replace(/\/+$/, "");
+})();
+
+const buildApiUrl = (path: string) => {
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+  return API_BASE ? `${API_BASE}${normalizedPath}` : normalizedPath;
+};
+
 interface CleanerResult {
   id: number;
   name: string;
@@ -68,7 +79,10 @@ const SearchProviders: React.FC = () => {
         params.radiusInKm = filters.radiusInKm;
       }
 
-      const response = await axios.get<{ providers: CleanerResult[] }>("/api/cleaners/search", { params });
+      const response = await axios.get<{ providers: CleanerResult[] }>(buildApiUrl("/api/cleaners/search"), {
+        params,
+        withCredentials: true,
+      });
       setCleaners(response.data.providers ?? []);
     } catch (requestError) {
       console.error("Search failed", requestError);
