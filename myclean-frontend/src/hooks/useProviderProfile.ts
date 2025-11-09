@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
+import { API_BASE } from '../Services/api';
 
 interface CleanerProfileResponse {
   success: boolean;
@@ -9,8 +10,6 @@ interface CleanerProfileResponse {
   isProfileComplete: boolean;
   profile: any;
 }
-
-const API_BASE = process.env.REACT_APP_API_URL?.replace(/\/+$/, '') || 'http://localhost:4000';
 
 export const useProviderProfile = () => {
   const { user, isProvider, token } = useAuth();

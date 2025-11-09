@@ -1,8 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { useAuth } from './AuthContext';
-
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:4000';
+import { API_BASE } from '../Services/api';
 
 interface SocketContextType {
   socket: Socket | null;
@@ -39,7 +38,7 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
 
     // Create socket connection
-    const newSocket = io(API_URL, {
+    const newSocket = io(API_BASE, {
       transports: ['websocket', 'polling'],
       reconnection: true,
       reconnectionAttempts: 5,

@@ -5,19 +5,9 @@ import Card from "../../components/Card";
 import FilterSidebar, { FilterState } from "../../components/search/FilterSidebar";
 import SortDropdown from "../../components/search/SortDropdown";
 import MapPreview from "../../components/search/MapPreview";
+import { buildApiUrl } from "../../Services/api";
 
 const SERVICE_OPTIONS = ["Deep Clean", "Standard Clean", "Move-out Clean", "Oven Cleaning", "Window Washing", "Carpet Cleaning"];
-
-const API_BASE = (() => {
-  const raw = process.env.REACT_APP_API_URL;
-  if (!raw) return "";
-  return raw.replace(/\/+$/, "");
-})();
-
-const buildApiUrl = (path: string) => {
-  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
-  return API_BASE ? `${API_BASE}${normalizedPath}` : normalizedPath;
-};
 
 interface CleanerResult {
   id: number;

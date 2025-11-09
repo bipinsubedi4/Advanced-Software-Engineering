@@ -4,9 +4,9 @@ import { format } from 'date-fns';
 import axios from 'axios';
 import { io, Socket } from 'socket.io-client';
 import { useAuth } from '../../context/AuthContext';
+import { API_BASE } from '../../Services/api';
 
-const SOCKET_BASE_RAW = process.env.REACT_APP_API_URL || 'http://localhost:4000';
-const SOCKET_URL = SOCKET_BASE_RAW.replace(/\/+$/, '');
+const SOCKET_URL = API_BASE;
 
 interface Message {
   id: number;

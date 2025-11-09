@@ -19,9 +19,7 @@ import {
 import Card from '../../components/Card';
 import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
-
-// Get API base URL
-const API_BASE = process.env.REACT_APP_API_URL?.replace(/\/+$/, '') || 'http://localhost:4000';
+import { API_BASE } from '../../Services/api';
 
 interface ProviderProfile {
   user: {
@@ -379,4 +377,3 @@ const YourProfile: React.FC = () => {
 };
 
 export default YourProfile;
-

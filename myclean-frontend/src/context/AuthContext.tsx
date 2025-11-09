@@ -1,6 +1,7 @@
 // src/context/AuthContext.tsx
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import axiosBase, { AxiosError } from 'axios';
+import { API_BASE } from '../Services/api';
 
 type Role = 'CUSTOMER' | 'PROVIDER' | 'ADMIN';
 
@@ -24,10 +25,6 @@ interface AuthContextType {
   isAdmin: boolean;
 }
 
-// ---- axios instance with baseURL
-// Normalize BASE URL: remove trailing slash to avoid double slashes
-const API_BASE_RAW = process.env.REACT_APP_API_URL || 'http://localhost:4000';
-const API_BASE = API_BASE_RAW.replace(/\/+$/, ''); // Remove trailing slashes
 const api = axiosBase.create({
   baseURL: API_BASE,
   // If you use cookies/sessions, set withCredentials: true.

@@ -1,10 +1,17 @@
 // src/services/api.ts
 
-// In production, REACT_APP_API_URL must be set in Vercel environment variables
-// For local dev, it defaults to localhost
-// Normalize BASE URL: remove trailing slash to avoid double slashes
-const BASE_RAW = process.env.REACT_APP_API_URL || "http://localhost:4000";
-const BASE = BASE_RAW.replace(/\/+$/, ''); // Remove trailing slashes
+// In production, REACT_APP_API_URL must be set in Vercel environment variables.
+// If it's missing (such as on preview deployments) we fall back to the deployed backend.
+// For local dev, default to localhost.
+const LOCAL_API_BASE = "http://localhost:4000";
+const PROD_FALLBACK_BASE = "https://advanced-software-engineering-production.up.railway.app";
+
+const BASE_RAW =
+  process.env.REACT_APP_API_URL ||
+  (process.env.NODE_ENV === "production" ? PROD_FALLBACK_BASE : LOCAL_API_BASE);
+
+const BASE = BASE_RAW.replace(/\/+$/, ""); // Remove trailing slashes
+export const API_BASE = BASE;
 
 // Debug logging
 console.log("🌐 API Base URL (raw):", BASE_RAW);
@@ -13,7 +20,7 @@ console.log("🌐 NODE_ENV:", process.env.NODE_ENV);
 
 // Log a warning in production if API URL is not configured
 if (process.env.NODE_ENV === 'production' && !process.env.REACT_APP_API_URL) {
-  console.error('⚠️ REACT_APP_API_URL is not set! API calls will fail. Please set it in Vercel environment variables.');
+  console.warn('⚠️ REACT_APP_API_URL is not set; falling back to deployed backend URL.');
 }
 
 export type Service = {
@@ -31,15 +38,15 @@ export type Service = {
 };
 
 // Helper function to build full URL, ensuring single slash between BASE and path
-function buildUrl(path: string): string {
+export function buildApiUrl(path: string): string {
   // Ensure path starts with /
-  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
   return `${BASE}${normalizedPath}`;
 }
 
 export async function get<T>(path: string): Promise<T> {
   try {
-    const url = buildUrl(path);
+    const url = buildApiUrl(path);
     console.log(`🔗 Fetching: ${url}`);
     const res = await fetch(url, { credentials: "include" });
     if (!res.ok) {
@@ -50,7 +57,7 @@ export async function get<T>(path: string): Promise<T> {
     return res.json() as Promise<T>;
   } catch (error) {
     if (error instanceof TypeError && error.message.includes('fetch')) {
-      const url = buildUrl(path);
+      const url = buildApiUrl(path);
       console.error(`🌐 Network error: Cannot reach ${url}. Is the backend running?`);
       throw new Error(`Cannot connect to backend at ${BASE}. Please check your REACT_APP_API_URL configuration.`);
     }
@@ -59,7 +66,7 @@ export async function get<T>(path: string): Promise<T> {
 }
 
 export async function post<T>(path: string, body: any): Promise<T> {
-  const url = buildUrl(path);
+  const url = buildApiUrl(path);
   console.log(`📤 POST: ${url}`);
   const res = await fetch(url, {
     method: "POST",

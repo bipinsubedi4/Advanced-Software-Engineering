@@ -10,8 +10,7 @@ import Step3Services from "./wizard/Step3Services";
 import Step4Availability from "./wizard/Step4Availability";
 import { DAY_NAMES, findServiceCategory } from "./wizard/constants";
 import { DayAvailability, ProfileWizardState, WizardServiceSelection } from "./wizard/types";
-
-const API_BASE = (process.env.REACT_APP_API_URL ?? "http://localhost:4000").replace(/\/+$/, "");
+import { API_BASE } from "../../Services/api";
 
 const buildDefaultAvailability = (): DayAvailability[] =>
   DAY_NAMES.map((day) => ({
