@@ -32,6 +32,26 @@ DATABASE_URL="file:./prisma/dev.db"
 JWT_SECRET="your-secret-key-here"
 PORT=4000
 
+# Email + notification settings
+SMTP_HOST="smtp.sendgrid.net"
+SMTP_PORT=587
+SMTP_USER="apikey"
+SMTP_PASS="your-api-key"
+EMAIL_FROM="MyClean <no-reply@myclean.app>"
+APP_BASE_URL="http://localhost:3000"
+BRAND_NAME="MyClean"
+SUPPORT_EMAIL="support@myclean.app"
+APP_TIMEZONE="America/New_York"
+EMAIL_ENABLED=true
+EMAIL_QUEUE_BATCH_SIZE=20
+EMAIL_QUEUE_INTERVAL_MS=15000
+EMAIL_QUEUE_MAX_ATTEMPTS=4
+EMAIL_QUEUE_RETRY_MINUTES="5,15,60"
+DISABLE_EMAIL_QUEUE=false
+
+# Email + notification settings
+# Use EMAIL_ENABLED=false to disable emails locally, or DISABLE_EMAIL_QUEUE=true to skip the worker entirely.
+
 # Run database migrations
 npx prisma migrate dev
 
@@ -42,7 +62,11 @@ npx prisma db seed
 npm run dev
 ```
 
+The SMTP credentials power the new branded email templates. Set `EMAIL_ENABLED=false` if you want to skip sending mail locally, or `DISABLE_EMAIL_QUEUE=true` to disable the worker entirely while keeping the templates available for later.
+
 The backend will run on `http://localhost:4000`
+
+> **Heads up:** After pulling the latest code, run `npx prisma migrate dev` to apply the new `EmailJob` queue table. If you're pointing at a shared/remote database, use `prisma migrate deploy` instead so the new table exists before booting the API.
 
 ### 2. Frontend Setup
 
@@ -380,4 +404,3 @@ This is a university project. All rights reserved.
 You now have a fully functional cleaning service booking platform. All the major features are implemented and ready to demo. Focus on understanding how the pieces fit together and be ready to explain the architecture and key decisions.
 
 Remember: The backend guy gave you basic auth and CRUD endpoints. You've built a complete, modern frontend that your team can be proud of!
-

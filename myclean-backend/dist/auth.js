@@ -8,6 +8,7 @@ const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const zod_1 = require("zod");
 const prisma_1 = require("./prisma");
+const emailService_1 = require("./email/emailService");
 const router = (0, express_1.Router)();
 const JWT_SECRET = process.env.JWT_SECRET || "dev-secret";
 // Schema for user registration
@@ -57,6 +58,12 @@ router.post("/register", async (req, res) => {
         });
     }
     // Issue token on successful registration
+    try {
+        await (0, emailService_1.queueWelcomeEmail)({ email: user.email, name: user.name, role: user.role });
+    }
+    catch (emailError) {
+        console.error("Failed to queue welcome email", emailError);
+    }
     const token = jsonwebtoken_1.default.sign({ sub: user.id, role: user.role }, JWT_SECRET, {
         expiresIn: "7d",
     });

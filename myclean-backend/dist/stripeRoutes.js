@@ -3,7 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const prisma_1 = require("./prisma");
 const zod_1 = require("zod");
-const mailer_1 = require("./mailer");
+const emailService_1 = require("./email/emailService");
 const router = (0, express_1.Router)();
 const mockPaymentSchema = zod_1.z.object({
     bookingId: zod_1.z.number(),
@@ -39,6 +39,11 @@ router.post("/mock/checkout", async (req, res) => {
                 paymentIntentId: `mock-${Date.now()}`,
                 status: booking.status === "PENDING" ? "ACCEPTED" : booking.status,
             },
+            include: {
+                customer: { select: { id: true, name: true, email: true, phone: true } },
+                provider: { select: { id: true, name: true, email: true, phone: true } },
+                service: { select: { serviceName: true } },
+            },
         });
         if (booking.providerId) {
             await prisma_1.prisma.notification.create({
@@ -51,12 +56,23 @@ router.post("/mock/checkout", async (req, res) => {
                 },
             });
         }
-        if (booking.provider?.email) {
-            await (0, mailer_1.sendPaymentReceivedEmail)({
-                to: booking.provider.email,
-                providerName: booking.provider.name,
-                customerName: booking.customer?.name ?? "Your client",
-                serviceName: booking.service?.serviceName ?? "your service",
+        const emailContext = (0, emailService_1.buildBookingEmailContextFromModel)(updatedBooking);
+        (0, emailService_1.queuePaymentReceivedEmail)(emailContext, updatedBooking.paymentIntentId).catch((error) => {
+            console.error("Failed to queue payment received email", error);
+        });
+        (0, emailService_1.queueBookingReceiptEmail)(emailContext, {
+            reference: updatedBooking.paymentIntentId,
+            method: payload.paymentMethod
+                ? payload.last4
+                    ? `${payload.paymentMethod} ••••${payload.last4}`
+                    : payload.paymentMethod
+                : undefined,
+        }).catch((error) => {
+            console.error("Failed to queue booking receipt email", error);
+        });
+        if (updatedBooking.status === "ACCEPTED") {
+            (0, emailService_1.scheduleBookingReminderEmails)(emailContext).catch((error) => {
+                console.error("Failed to schedule reminders after payment", error);
             });
         }
         res.json({ success: true, paymentStatus: "PAID", booking: { id: updatedBooking.id, status: updatedBooking.status } });

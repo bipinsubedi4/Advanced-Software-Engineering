@@ -4,6 +4,7 @@ const express_1 = require("express");
 const prisma_1 = require("./prisma");
 const zod_1 = require("zod");
 const client_1 = require("@prisma/client");
+const emailService_1 = require("./email/emailService");
 const router = (0, express_1.Router)();
 const createPublicJobSchema = zod_1.z.object({
     clientId: zod_1.z.number(),
@@ -228,6 +229,11 @@ router.post("/public/:bidId/accept", async (req, res) => {
                 publicJobId: bid.publicJobId,
                 status: "PENDING",
             },
+            include: {
+                customer: { select: { name: true, email: true, phone: true } },
+                provider: { select: { name: true, email: true, phone: true } },
+                service: { select: { serviceName: true } },
+            },
         });
         await prisma_1.prisma.notification.createMany({
             data: [
@@ -246,6 +252,9 @@ router.post("/public/:bidId/accept", async (req, res) => {
                     link: "/my-bookings",
                 },
             ],
+        });
+        (0, emailService_1.queueBookingConfirmationEmails)((0, emailService_1.buildBookingEmailContextFromModel)(booking), booking.status).catch((error) => {
+            console.error("Failed to queue booking confirmation emails for marketplace job", error);
         });
         res.json({ success: true, booking });
     }

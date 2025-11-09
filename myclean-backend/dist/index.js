@@ -21,6 +21,7 @@ const verification_1 = __importDefault(require("./verification"));
 const recurringJobs_1 = __importDefault(require("./recurringJobs"));
 const availability_1 = __importDefault(require("./availability"));
 const recurringJobProcessor_1 = require("./cron/recurringJobProcessor");
+const emailService_1 = require("./email/emailService");
 const middleware_1 = require("./middleware");
 const socket_1 = require("./socket");
 const app = (0, express_1.default)();
@@ -209,6 +210,7 @@ app.post("/api/messages", async (req, res) => {
     }
 });
 (0, recurringJobProcessor_1.startRecurringJobProcessor)();
+(0, emailService_1.startEmailQueueWorker)();
 const port = Number(process.env.PORT || 4000);
 httpServer.listen(port, "0.0.0.0", () => {
     console.log(`🚀 MyClean Backend API running on port ${port}`);

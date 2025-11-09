@@ -2,6 +2,11 @@ import { Request, Response, Router } from "express";
 import { prisma } from "./prisma";
 import { z } from "zod";
 import { PublicJobStatus, PublicJobBidStatus } from "@prisma/client";
+import {
+  buildBookingEmailContextFromModel,
+  queueBookingConfirmationEmails,
+  type BookingWithRelations,
+} from "./email/emailService";
 
 const router = Router();
 
@@ -251,6 +256,11 @@ router.post("/public/:bidId/accept", async (req: Request, res: Response) => {
         publicJobId: bid.publicJobId,
         status: "PENDING",
       },
+      include: {
+        customer: { select: { name: true, email: true, phone: true } },
+        provider: { select: { name: true, email: true, phone: true } },
+        service: { select: { serviceName: true } },
+      },
     });
 
     await prisma.notification.createMany({
@@ -270,6 +280,13 @@ router.post("/public/:bidId/accept", async (req: Request, res: Response) => {
           link: "/my-bookings",
         },
       ],
+    });
+
+    queueBookingConfirmationEmails(
+      buildBookingEmailContextFromModel(booking as BookingWithRelations),
+      booking.status
+    ).catch((error) => {
+      console.error("Failed to queue booking confirmation emails for marketplace job", error);
     });
 
     res.json({ success: true, booking });

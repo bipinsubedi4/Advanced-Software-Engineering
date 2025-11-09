@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { z } from "zod";
 import { prisma } from "./prisma";
+import { queueWelcomeEmail } from "./email/emailService";
 
 const router = Router();
 const JWT_SECRET = process.env.JWT_SECRET || "dev-secret";
@@ -59,6 +60,12 @@ if (user.role === "PROVIDER") {
 
 
   // Issue token on successful registration
+  try {
+    await queueWelcomeEmail({ email: user.email, name: user.name, role: user.role });
+  } catch (emailError) {
+    console.error("Failed to queue welcome email", emailError);
+  }
+
   const token = jwt.sign({ sub: user.id, role: user.role }, JWT_SECRET, {
     expiresIn: "7d",
   });

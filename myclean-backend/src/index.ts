@@ -16,6 +16,7 @@ import verificationRouter from "./verification";
 import recurringJobsRouter from "./recurringJobs";
 import availabilityRouter from "./availability";
 import { startRecurringJobProcessor } from "./cron/recurringJobProcessor";
+import { startEmailQueueWorker } from "./email/emailService";
 import { authenticateToken, AuthRequest } from "./middleware";
 import { initializeSocket } from "./socket";
 
@@ -253,6 +254,7 @@ app.post("/api/messages", async (req: Request, res: Response) => {
 });
 
 startRecurringJobProcessor();
+startEmailQueueWorker();
 
 const port = Number(process.env.PORT || 4000);
 httpServer.listen(port, "0.0.0.0", () => {

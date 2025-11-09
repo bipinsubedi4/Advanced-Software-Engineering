@@ -1,7 +1,12 @@
 import { Router } from "express";
 import { prisma } from "./prisma";
 import { z } from "zod";
-import { sendPaymentReceivedEmail } from "./mailer";
+import {
+  buildBookingEmailContextFromModel,
+  queueBookingReceiptEmail,
+  queuePaymentReceivedEmail,
+  scheduleBookingReminderEmails,
+} from "./email/emailService";
 
 const router = Router();
 
@@ -45,6 +50,11 @@ router.post("/mock/checkout", async (req, res) => {
         paymentIntentId: `mock-${Date.now()}`,
         status: booking.status === "PENDING" ? "ACCEPTED" : booking.status,
       },
+      include: {
+        customer: { select: { id: true, name: true, email: true, phone: true } },
+        provider: { select: { id: true, name: true, email: true, phone: true } },
+        service: { select: { serviceName: true } },
+      },
     });
 
     if (booking.providerId) {
@@ -59,12 +69,26 @@ router.post("/mock/checkout", async (req, res) => {
       });
     }
 
-    if (booking.provider?.email) {
-      await sendPaymentReceivedEmail({
-        to: booking.provider.email,
-        providerName: booking.provider.name,
-        customerName: booking.customer?.name ?? "Your client",
-        serviceName: booking.service?.serviceName ?? "your service",
+    const emailContext = buildBookingEmailContextFromModel(updatedBooking);
+
+    queuePaymentReceivedEmail(emailContext, updatedBooking.paymentIntentId).catch((error) => {
+      console.error("Failed to queue payment received email", error);
+    });
+
+    queueBookingReceiptEmail(emailContext, {
+      reference: updatedBooking.paymentIntentId,
+      method: payload.paymentMethod
+        ? payload.last4
+          ? `${payload.paymentMethod} ••••${payload.last4}`
+          : payload.paymentMethod
+        : undefined,
+    }).catch((error) => {
+      console.error("Failed to queue booking receipt email", error);
+    });
+
+    if (updatedBooking.status === "ACCEPTED") {
+      scheduleBookingReminderEmails(emailContext).catch((error) => {
+        console.error("Failed to schedule reminders after payment", error);
       });
     }
 

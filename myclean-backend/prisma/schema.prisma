@@ -32,6 +32,24 @@ enum RecurringFrequency {
   MONTHLY
 }
 
+enum EmailJobStatus {
+  PENDING
+  PROCESSING
+  SENT
+  FAILED
+}
+
+enum EmailTemplate {
+  WELCOME
+  BOOKING_CONFIRM_CUSTOMER
+  BOOKING_CONFIRM_PROVIDER
+  BOOKING_REMINDER_CUSTOMER
+  BOOKING_REMINDER_PROVIDER
+  BOOKING_RECEIPT_CUSTOMER
+  PAYMENT_REMINDER_CUSTOMER
+  PAYMENT_RECEIVED_PROVIDER
+}
+
 // User model - for both customers and providers
 model User {
   id                Int                @id @default(autoincrement())
@@ -314,4 +332,20 @@ model CleanerAvailability {
   cleaner    User     @relation(fields: [cleanerId], references: [id], onDelete: Cascade)
 
   @@index([cleanerId, dayOfWeek])
+}
+
+model EmailJob {
+  id           Int            @id @default(autoincrement())
+  to           String
+  subject      String
+  template     EmailTemplate
+  payload      Json
+  status       EmailJobStatus @default(PENDING)
+  attemptCount Int            @default(0)
+  maxAttempts  Int            @default(3)
+  lastError    String?
+  scheduledFor DateTime       @default(now())
+  sentAt       DateTime?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
 }
