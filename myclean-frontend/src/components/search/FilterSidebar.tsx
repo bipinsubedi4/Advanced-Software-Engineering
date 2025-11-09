@@ -1,5 +1,6 @@
 import React from "react";
 import Slider from "rc-slider";
+import Range from "rc-slider/lib/Range";
 import DatePicker from "react-datepicker";
 import "rc-slider/assets/index.css";
 import "react-datepicker/dist/react-datepicker.css";
@@ -27,7 +28,6 @@ const ratingOptions = [
 ];
 
 const FilterSidebar: React.FC<FilterSidebarProps> = ({ filters, onChange, onReset, availableServices }) => {
-  const Range = Slider.Range;
   const toggleService = (service: string) => {
     if (filters.selectedServices.includes(service)) {
       onChange({ selectedServices: filters.selectedServices.filter((name) => name !== service) });
