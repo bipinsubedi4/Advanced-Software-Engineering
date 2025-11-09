@@ -6,6 +6,11 @@ import { authenticateToken, AuthRequest } from "./middleware";
 
 const router = Router();
 
+const withProfileCompletion = <T extends { isProfileComplete: boolean }>(profile: T) => ({
+  ...profile,
+  profileComplete: profile.isProfileComplete,
+});
+
 const profileSchema = z.object({
   userId: z.number(),
   basicInfo: z.object({
@@ -68,7 +73,7 @@ router.get("/", async (_req: Request, res: Response) => {
       },
       orderBy: { averageRating: "desc" },
     });
-    res.json({ success: true, providers });
+    res.json({ success: true, providers: providers.map(withProfileCompletion) });
   } catch (error) {
     console.error("Error fetching providers:", error);
     res.status(500).json({ error: "Failed to list providers", details: error instanceof Error ? error.message : String(error) });
@@ -88,7 +93,7 @@ router.get("/:id", async (req: Request, res: Response) => {
       },
     });
     if (!profile) return res.status(404).json({ error: "Profile not found" });
-    res.json({ success: true, profile });
+    res.json({ success: true, profile: withProfileCompletion(profile) });
   } catch (error) {
     console.error("Error fetching provider by id:", error);
     res.status(500).json({ error: "Failed to fetch profile", details: error instanceof Error ? error.message : String(error) });
@@ -112,17 +117,17 @@ router.get("/me/profile", authenticateToken, async (req: Request, res: Response)
   // if not found, create a basic one now (safety)
   if (!me) {
     const created = await prisma.providerProfile.create({
-      data: { userId, isActive: true, isVerified: false, profileComplete: false },
+      data: { userId, isActive: true, isVerified: false, isProfileComplete: false },
       include: {
         user: { select: { id: true, name: true, profileImage: true } },
         services: true,
         blockedDates: true,
       },
     });
-    return res.json({ success: true, profile: created });
+    return res.json({ success: true, profile: withProfileCompletion(created) });
   }
 
-  res.json({ success: true, profile: me });
+  res.json({ success: true, profile: withProfileCompletion(me) });
 });
 
 /* ---------- PRIVATE: upsert my provider profile ---------- */
@@ -175,7 +180,7 @@ router.post("/me/profile", authenticateToken, async (req: Request, res: Response
         state,
         zipCode,
         isActive: !!isActive,
-        profileComplete: true,
+        isProfileComplete: true,
       },
       create: {
         userId,
@@ -191,7 +196,7 @@ router.post("/me/profile", authenticateToken, async (req: Request, res: Response
         state,
         zipCode,
         isActive: !!isActive,
-        profileComplete: true,
+        isProfileComplete: true,
       },
       include: {
         user: { select: { id: true, name: true, profileImage: true } },
@@ -199,7 +204,7 @@ router.post("/me/profile", authenticateToken, async (req: Request, res: Response
       },
     });
 
-    res.json({ success: true, profile: upserted });
+    res.json({ success: true, profile: withProfileCompletion(upserted) });
   } catch (e) {
     console.error(e);
     res.status(500).json({ error: "Failed to save provider profile" });
@@ -244,7 +249,7 @@ router.post("/me/services", authenticateToken, async (req: Request, res: Respons
       },
     });
 
-    res.json({ success: true, profile: refreshed });
+    res.json({ success: true, profile: refreshed ? withProfileCompletion(refreshed) : null });
   } catch (e) {
     console.error(e);
     res.status(500).json({ error: "Failed to save services" });
@@ -285,7 +290,7 @@ router.post("/profile", async (req, res) => {
         hasVehicle: validatedData.professional.hasVehicle,
         hasEquipment: validatedData.professional.hasEquipment,
         certifications: validatedData.professional.certifications || null,
-        profileComplete: true,
+        isProfileComplete: true,
         isActive: true,  // Provider is active immediately
         isVerified: true,  // Auto-verify for demo (in production, admin would verify)
       },
@@ -301,7 +306,7 @@ router.post("/profile", async (req, res) => {
         hasVehicle: validatedData.professional.hasVehicle,
         hasEquipment: validatedData.professional.hasEquipment,
         certifications: validatedData.professional.certifications || null,
-        profileComplete: true,
+        isProfileComplete: true,
         isActive: true,  // Ensure provider stays active on update
         updatedAt: new Date(),
       },
@@ -385,7 +390,7 @@ router.post("/profile", async (req, res) => {
     res.status(201).json({
       success: true,
       message: "Profile created successfully!",
-      profile: completeProfile,
+      profile: completeProfile ? withProfileCompletion(completeProfile) : null,
     });
   } catch (error: unknown) {
     console.error("Profile creation error:", error);
@@ -429,7 +434,7 @@ router.get("/profile/:userId", async (req, res) => {
 
     res.json({
       success: true,
-      profile,
+      profile: profile ? withProfileCompletion(profile) : null,
     });
   } catch (error) {
     console.error("Get profile error:", error);

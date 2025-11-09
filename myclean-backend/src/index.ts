@@ -9,6 +9,7 @@ import bookingsRouter from "./bookings";
 import reviewsRouter from "./reviews";
 import servicesRoute from "./servicesRoute";
 import providersRouter from "./providers";
+import cleanersRouter from "./cleaners";
 import jobsRouter from "./jobs";
 import marketplaceRouter from "./marketplace";
 import stripeRouter from "./stripeRoutes";
@@ -91,6 +92,7 @@ app.use("/api/auth", authRouter);
 
 // Iteration 2 API routes
 app.use("/api/providers", providersRouter);
+app.use("/api/cleaners", cleanersRouter);
 app.use("/api/bookings", bookingsRouter);
 app.use("/api/reviews", reviewsRouter);
 app.use("/api/jobs", marketplaceRouter);

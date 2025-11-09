@@ -1,49 +1,63 @@
 // Hook to check if provider profile is complete
-import { useState, useEffect } from 'react';
-import { useAuth } from '../context/AuthContext';
+import { useCallback, useEffect, useState } from 'react';
 import axios from 'axios';
+import { useAuth } from '../context/AuthContext';
 
-interface ProviderProfileResponse {
+interface CleanerProfileResponse {
   success: boolean;
-  profile: {
-    profileComplete: boolean;
-  };
+  profileComplete: boolean;
+  isProfileComplete: boolean;
+  profile: any;
 }
+
+const API_BASE = process.env.REACT_APP_API_URL?.replace(/\/+$/, '') || 'http://localhost:4000';
 
 export const useProviderProfile = () => {
   const { user, isProvider, token } = useAuth();
   const [profileComplete, setProfileComplete] = useState<boolean | null>(null);
+  const [profile, setProfile] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshIndex, setRefreshIndex] = useState(0);
+
+  const refetch = useCallback(() => {
+    setRefreshIndex((index) => index + 1);
+  }, []);
 
   useEffect(() => {
     if (!isProvider || !user || !token) {
       setProfileComplete(null);
+      setProfile(null);
       setLoading(false);
       return;
     }
 
-    // Check if provider profile is complete
-    const checkProfile = async () => {
+    const fetchProfile = async () => {
+      setLoading(true);
       try {
-        const API_BASE = process.env.REACT_APP_API_URL?.replace(/\/+$/, '') || 'http://localhost:4000';
-        const response = await axios.get<ProviderProfileResponse>(`${API_BASE}/api/providers/me/profile`, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
+        const response = await axios.get<CleanerProfileResponse>(`${API_BASE}/api/cleaners/me`, {
+          headers: { Authorization: `Bearer ${token}` },
         });
-        setProfileComplete(response.data.profile?.profileComplete ?? false);
+
+        const completionFlag =
+          response.data.isProfileComplete ??
+          response.data.profileComplete ??
+          response.data.profile?.isProfileComplete ??
+          response.data.profile?.profileComplete ??
+          false;
+
+        setProfileComplete(completionFlag);
+        setProfile(response.data.profile ?? null);
       } catch (error) {
-        // If profile doesn't exist or error, assume incomplete
         console.error('Error checking profile:', error);
         setProfileComplete(false);
+        setProfile(null);
       } finally {
         setLoading(false);
       }
     };
 
-    checkProfile();
-  }, [user, isProvider, token]);
+    fetchProfile();
+  }, [user, isProvider, token, refreshIndex]);
 
-  return { profileComplete, loading };
+  return { profileComplete, profile, loading, refetch };
 };
-

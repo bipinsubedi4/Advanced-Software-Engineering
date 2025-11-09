@@ -14,6 +14,7 @@ const bookings_1 = __importDefault(require("./bookings"));
 const reviews_1 = __importDefault(require("./reviews"));
 const servicesRoute_1 = __importDefault(require("./servicesRoute"));
 const providers_1 = __importDefault(require("./providers"));
+const cleaners_1 = __importDefault(require("./cleaners"));
 const jobs_1 = __importDefault(require("./jobs"));
 const marketplace_1 = __importDefault(require("./marketplace"));
 const stripeRoutes_1 = __importDefault(require("./stripeRoutes"));
@@ -65,6 +66,7 @@ app.get("/api/health", (_req, res) => res.json({ ok: true }));
 app.use("/api/auth", auth_1.default);
 // Iteration 2 API routes
 app.use("/api/providers", providers_1.default);
+app.use("/api/cleaners", cleaners_1.default);
 app.use("/api/bookings", bookings_1.default);
 app.use("/api/reviews", reviews_1.default);
 app.use("/api/jobs", marketplace_1.default);

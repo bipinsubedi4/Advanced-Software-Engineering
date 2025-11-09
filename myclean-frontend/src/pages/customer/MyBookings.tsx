@@ -95,14 +95,17 @@ const formatCurrency = (value: number) => {
   }
 };
 
-const getPaymentStatusMeta = (status?: string) => {
+const getPaymentStatusMeta = (status?: string, awaitingPayment?: boolean) => {
   switch (status) {
     case 'PAID':
       return { label: 'Payment complete', className: 'bg-green-100 text-green-800 border border-green-200' };
     case 'REFUNDED':
       return { label: 'Refunded', className: 'bg-gray-100 text-gray-800 border border-gray-200' };
     default:
-      return { label: 'Awaiting payment', className: 'bg-yellow-50 text-yellow-800 border border-yellow-200' };
+      if (awaitingPayment) {
+        return { label: 'Awaiting payment', className: 'bg-yellow-50 text-yellow-800 border border-yellow-200' };
+      }
+      return { label: 'Pending cleaner confirmation', className: 'bg-gray-50 text-gray-600 border border-gray-200' };
   }
 };
 
@@ -442,9 +445,9 @@ const MyBookings: React.FC = () => {
         ) : (
           <div className="space-y-4">
             {filteredBookings.map((booking) => {
-              const paymentMeta = getPaymentStatusMeta(booking.paymentStatus);
-              const requiresPayment =
-                ['PENDING', 'ACCEPTED'].includes(booking.status) && booking.totalPrice > 0 && booking.paymentStatus !== 'PAID';
+              const awaitingPayment =
+                booking.status === 'ACCEPTED' && booking.totalPrice > 0 && booking.paymentStatus !== 'PAID';
+              const paymentMeta = getPaymentStatusMeta(booking.paymentStatus, awaitingPayment);
 
               return (
                 <Card key={booking.id}>
@@ -459,8 +462,8 @@ const MyBookings: React.FC = () => {
                     <div className="flex-1">
                       <div className="flex items-center justify-between mb-2">
                         <h3 className="text-xl font-semibold text-gray-900">{booking.provider.name}</h3>
-                        <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusClass(booking.status, requiresPayment)}`}>
-                          {statusLabel(booking.status, requiresPayment)}
+                        <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusClass(booking.status, awaitingPayment)}`}>
+                          {statusLabel(booking.status, awaitingPayment)}
                         </span>
                       </div>
 
@@ -506,7 +509,7 @@ const MyBookings: React.FC = () => {
                       )}
 
                       <div className="mt-4 flex flex-wrap gap-3">
-                        {requiresPayment && (
+                        {awaitingPayment && (
                           <button
                             onClick={() => navigate(`/payment?bookingId=${booking.id}`)}
                             className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"

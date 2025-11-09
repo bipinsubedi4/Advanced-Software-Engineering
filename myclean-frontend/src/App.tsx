@@ -22,7 +22,7 @@ import CustomerMarketplace from './pages/customer/Marketplace';
 // Provider Pages
 import ProviderDashboard from './pages/provider/Dashboard';
 import ProviderLandingPage from './pages/provider/ProviderLandingPage';
-import ProviderProfileSetup from './pages/provider/ProviderProfileSetup';
+import ProfileWizard from './pages/provider/ProfileWizard';
 import YourProfile from './pages/provider/YourProfile';
 import AvailabilityCalendar from './pages/provider/AvailabilityCalendar';
 import MessagesRealtime from './pages/provider/MessagesRealtime';
@@ -103,7 +103,7 @@ function App() {
               path="/provider/profile-setup"
               element={
                 <ProviderRoute allowIncomplete={true}>
-                  <ProviderProfileSetup />
+                  <ProfileWizard />
                 </ProviderRoute>
               }
             />

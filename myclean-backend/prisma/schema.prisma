@@ -96,7 +96,7 @@ model ProviderProfile {
   serviceRadius     Int       @default(10)
   isVerified        Boolean   @default(false)
   isActive          Boolean   @default(true)
-  profileComplete   Boolean   @default(false)
+  isProfileComplete Boolean   @default(false)
   averageRating     Float     @default(0)
   totalReviews      Int       @default(0)
   totalBookings     Int       @default(0)

@@ -50,7 +50,7 @@ router.post("/register", async (req, res) => {
                 serviceRadius: 10,
                 isVerified: false,
                 isActive: true,
-                profileComplete: false,
+                isProfileComplete: false,
                 averageRating: 0,
                 totalReviews: 0,
                 totalBookings: 0,
