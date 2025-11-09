@@ -61,7 +61,6 @@ const CustomerMarketplace: React.FC = () => {
   const [acceptBid, setAcceptBid] = useState<Bid | null>(null);
   const [accepting, setAccepting] = useState(false);
   const [acceptForm, setAcceptForm] = useState({
-    serviceId: '',
     bookingDate: '',
     startTime: '09:00',
     endTime: '11:00',
@@ -135,7 +134,6 @@ const CustomerMarketplace: React.FC = () => {
   const openAcceptModal = (job: PublicJob, bid: Bid) => {
     setAcceptBid(bid);
     setAcceptForm({
-      serviceId: '',
       bookingDate: job.preferredDate?.split('T')[0] || '',
       startTime: job.preferredStartTime || '09:00',
       endTime: job.preferredEndTime || '11:00',
@@ -150,17 +148,12 @@ const CustomerMarketplace: React.FC = () => {
   const submitBidAcceptance = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!acceptBid || !user) return;
-    if (!acceptForm.serviceId) {
-      setError('Please provide the service ID from the selected cleaner.');
-      return;
-    }
     setAccepting(true);
     setError(null);
     setSuccess(null);
     try {
       await axios.post(`/api/jobs/public/${acceptBid.id}/accept`, {
         clientId: user.id,
-        serviceId: Number(acceptForm.serviceId),
         bookingDate: acceptForm.bookingDate,
         startTime: acceptForm.startTime,
         endTime: acceptForm.endTime,
@@ -310,8 +303,7 @@ const CustomerMarketplace: React.FC = () => {
       <Modal isOpen={!!acceptBid} onClose={() => setAcceptBid(null)} title="Accept bid & create booking">
         {acceptBid && (
           <form className="space-y-3" onSubmit={submitBidAcceptance}>
-            <p className="text-sm text-gray-600">Enter the service ID and schedule details for this cleaner.</p>
-            <input name="serviceId" value={acceptForm.serviceId} onChange={(e) => setAcceptForm({ ...acceptForm, serviceId: e.target.value })} placeholder="Service ID from cleaner profile" className="w-full border border-gray-300 rounded px-3 py-2" required />
+            <p className="text-sm text-gray-600">Confirm the booking details for this cleaner. We'll link it to their active service automatically.</p>
             <input type="date" name="bookingDate" value={acceptForm.bookingDate} onChange={(e) => setAcceptForm({ ...acceptForm, bookingDate: e.target.value })} className="w-full border border-gray-300 rounded px-3 py-2" required />
             <div className="grid grid-cols-2 gap-3">
               <input type="time" name="startTime" value={acceptForm.startTime} onChange={(e) => setAcceptForm({ ...acceptForm, startTime: e.target.value })} className="border border-gray-300 rounded px-3 py-2" required />

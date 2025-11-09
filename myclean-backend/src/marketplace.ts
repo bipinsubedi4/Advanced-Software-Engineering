@@ -144,7 +144,7 @@ router.post("/public/:id/bid", async (req: Request, res: Response) => {
 
 const acceptBidSchema = z.object({
   clientId: z.number(),
-  serviceId: z.number(),
+  serviceId: z.number().optional(),
   bookingDate: z.string().optional(),
   startTime: z.string().optional(),
   endTime: z.string().optional(),
@@ -179,6 +179,40 @@ router.post("/public/:bidId/accept", async (req: Request, res: Response) => {
       return res.status(400).json({ error: "Job is already closed" });
     }
 
+    const providerProfile = await prisma.providerProfile.findUnique({
+      where: { userId: bid.cleanerId },
+      include: { services: true },
+    });
+
+    if (!providerProfile) {
+      return res.status(404).json({ error: "Cleaner profile not found" });
+    }
+
+    let selectedServiceId = payload.serviceId;
+
+    if (selectedServiceId) {
+      const ownsService = providerProfile.services.some((service) => service.id === selectedServiceId);
+      if (!ownsService) {
+        return res.status(400).json({ error: "Selected service does not belong to this provider" });
+      }
+    } else {
+      if (providerProfile.services.length > 0) {
+        selectedServiceId = providerProfile.services[0].id;
+      } else {
+        const fallbackPrice = bid.proposedPrice ?? bid.publicJob.budgetMax ?? bid.publicJob.budgetMin ?? 100;
+        const autoService = await prisma.providerService.create({
+          data: {
+            providerId: providerProfile.id,
+            serviceName: bid.publicJob.serviceType || "Marketplace job",
+            description: bid.publicJob.description?.slice(0, 180) ?? "Automatically created from accepted marketplace job",
+            pricePerHour: Math.max(fallbackPrice * 100, 1000),
+            durationMin: 60,
+          },
+        });
+        selectedServiceId = autoService.id;
+      }
+    }
+
     await prisma.$transaction([
       prisma.publicJob.update({
         where: { id: bid.publicJobId },
@@ -201,7 +235,7 @@ router.post("/public/:bidId/accept", async (req: Request, res: Response) => {
       data: {
         customerId: bid.publicJob.clientId,
         providerId: bid.cleanerId,
-        serviceId: payload.serviceId,
+        serviceId: selectedServiceId!,
         bookingDate: payload.bookingDate
           ? new Date(payload.bookingDate)
           : bid.publicJob.preferredDate ?? new Date(),

@@ -130,7 +130,7 @@ router.post("/public/:id/bid", async (req, res) => {
 });
 const acceptBidSchema = zod_1.z.object({
     clientId: zod_1.z.number(),
-    serviceId: zod_1.z.number(),
+    serviceId: zod_1.z.number().optional(),
     bookingDate: zod_1.z.string().optional(),
     startTime: zod_1.z.string().optional(),
     endTime: zod_1.z.string().optional(),
@@ -159,6 +159,38 @@ router.post("/public/:bidId/accept", async (req, res) => {
         if (bid.publicJob.status !== client_1.PublicJobStatus.BIDDING) {
             return res.status(400).json({ error: "Job is already closed" });
         }
+        const providerProfile = await prisma_1.prisma.providerProfile.findUnique({
+            where: { userId: bid.cleanerId },
+            include: { services: true },
+        });
+        if (!providerProfile) {
+            return res.status(404).json({ error: "Cleaner profile not found" });
+        }
+        let selectedServiceId = payload.serviceId;
+        if (selectedServiceId) {
+            const ownsService = providerProfile.services.some((service) => service.id === selectedServiceId);
+            if (!ownsService) {
+                return res.status(400).json({ error: "Selected service does not belong to this provider" });
+            }
+        }
+        else {
+            if (providerProfile.services.length > 0) {
+                selectedServiceId = providerProfile.services[0].id;
+            }
+            else {
+                const fallbackPrice = bid.proposedPrice ?? bid.publicJob.budgetMax ?? bid.publicJob.budgetMin ?? 100;
+                const autoService = await prisma_1.prisma.providerService.create({
+                    data: {
+                        providerId: providerProfile.id,
+                        serviceName: bid.publicJob.serviceType || "Marketplace job",
+                        description: bid.publicJob.description?.slice(0, 180) ?? "Automatically created from accepted marketplace job",
+                        pricePerHour: Math.max(fallbackPrice * 100, 1000),
+                        durationMin: 60,
+                    },
+                });
+                selectedServiceId = autoService.id;
+            }
+        }
         await prisma_1.prisma.$transaction([
             prisma_1.prisma.publicJob.update({
                 where: { id: bid.publicJobId },
@@ -180,7 +212,7 @@ router.post("/public/:bidId/accept", async (req, res) => {
             data: {
                 customerId: bid.publicJob.clientId,
                 providerId: bid.cleanerId,
-                serviceId: payload.serviceId,
+                serviceId: selectedServiceId,
                 bookingDate: payload.bookingDate
                     ? new Date(payload.bookingDate)
                     : bid.publicJob.preferredDate ?? new Date(),
