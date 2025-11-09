@@ -1,6 +1,5 @@
 import React from "react";
 import Slider from "rc-slider";
-import Range from "rc-slider/lib/Range";
 import DatePicker from "react-datepicker";
 import "rc-slider/assets/index.css";
 import "react-datepicker/dist/react-datepicker.css";
@@ -47,11 +46,13 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({ filters, onChange, onRese
 
       <div>
         <p className="text-sm font-medium text-gray-700 mb-2">Price range (${filters.priceRange[0]}–${filters.priceRange[1]})</p>
-        <Range
+        <Slider
+          range
           value={filters.priceRange}
           min={20}
           max={250}
           step={5}
+          allowCross={false}
           allowCross={false}
           onChange={(value) => {
             if (Array.isArray(value) && value.length === 2) {
