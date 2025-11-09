@@ -17,6 +17,7 @@ import SearchProviders from './pages/customer/SearchProviders';
 import ProviderProfile from './pages/customer/ProviderProfile';
 import MyBookings from './pages/customer/MyBookings';
 import Payment from './pages/customer/Payment';
+import CustomerMarketplace from './pages/customer/Marketplace';
 
 // Provider Pages
 import ProviderDashboard from './pages/provider/Dashboard';
@@ -26,6 +27,7 @@ import YourProfile from './pages/provider/YourProfile';
 import AvailabilityCalendar from './pages/provider/AvailabilityCalendar';
 import MessagesRealtime from './pages/provider/MessagesRealtime';
 import PaymentTracking from './pages/provider/PaymentTracking';
+import ProviderPublicJobsBoard from './pages/provider/PublicJobsBoard';
 
 // Admin Pages
 import AdminDashboard from './pages/admin/AdminDashboard';
@@ -68,6 +70,14 @@ function App() {
               element={
                 <ProtectedRoute allowedRoles={['CUSTOMER']}>
                   <MyBookings />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/marketplace"
+              element={
+                <ProtectedRoute allowedRoles={['CUSTOMER']}>
+                  <CustomerMarketplace />
                 </ProtectedRoute>
               }
             />
@@ -134,6 +144,14 @@ function App() {
               element={
                 <ProviderRoute>
                   <PaymentTracking />
+                </ProviderRoute>
+              }
+            />
+            <Route
+              path="/provider/marketplace"
+              element={
+                <ProviderRoute>
+                  <ProviderPublicJobsBoard />
                 </ProviderRoute>
               }
             />

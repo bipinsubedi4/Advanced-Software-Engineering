@@ -85,6 +85,9 @@ const Navbar: React.FC = () => {
                     <Link to="/search" className="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium">
                       Find Cleaners
                     </Link>
+                    <Link to="/marketplace" className="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium">
+                      Marketplace
+                    </Link>
                     <Link to="/my-bookings" className="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium">
                       My Bookings
                     </Link>
@@ -103,6 +106,9 @@ const Navbar: React.FC = () => {
                     </Link>
                     <Link to="/provider/messages" className="text-gray-700 hover:text-indigo-600 px-3 py-2 rounded-md text-sm font-medium">
                       Messages
+                    </Link>
+                    <Link to="/provider/marketplace" className="text-gray-700 hover:text-indigo-600 px-3 py-2 rounded-md text-sm font-medium">
+                      Marketplace
                     </Link>
                   </>
                 )}
@@ -224,6 +230,9 @@ const Navbar: React.FC = () => {
                     <Link to="/search" className="block text-gray-700 hover:bg-blue-50 px-3 py-2 rounded-md text-base font-medium">
                       Find Cleaners
                     </Link>
+                    <Link to="/marketplace" className="block text-gray-700 hover:bg-blue-50 px-3 py-2 rounded-md text-base font-medium">
+                      Marketplace
+                    </Link>
                     <Link to="/my-bookings" className="block text-gray-700 hover:bg-blue-50 px-3 py-2 rounded-md text-base font-medium">
                       My Bookings
                     </Link>
@@ -242,6 +251,9 @@ const Navbar: React.FC = () => {
                     </Link>
                     <Link to="/provider/messages" className="block text-gray-700 hover:bg-blue-50 px-3 py-2 rounded-md text-base font-medium">
                       Messages
+                    </Link>
+                    <Link to="/provider/marketplace" className="block text-gray-700 hover:bg-blue-50 px-3 py-2 rounded-md text-base font-medium">
+                      Marketplace
                     </Link>
                   </>
                 )}
@@ -278,4 +290,3 @@ const Navbar: React.FC = () => {
 };
 
 export default Navbar;
-
