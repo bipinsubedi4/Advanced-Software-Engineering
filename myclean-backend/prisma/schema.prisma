@@ -93,6 +93,8 @@ model ProviderProfile {
   city              String?
   state             String?
   zipCode           String?
+  latitude          Float?
+  longitude         Float?
   serviceRadius     Int       @default(10)
   isVerified        Boolean   @default(false)
   isActive          Boolean   @default(true)

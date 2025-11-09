@@ -1,421 +1,250 @@
-// src/pages/customer/SearchProviders.tsx
-import React, { useEffect, useState } from "react";
-import { FaSearch, FaStar, FaMapMarkerAlt, FaDollarSign, FaFilter } from "react-icons/fa";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import axios from "axios";
+import { FaMapMarkerAlt, FaStar, FaShieldAlt } from "react-icons/fa";
 import Card from "../../components/Card";
-import { useNavigate } from "react-router-dom";
-import { fetchProviders, type ProviderProfile } from "../../Services/providers"; // ← adjust casing if needed
+import FilterSidebar, { FilterState } from "../../components/search/FilterSidebar";
+import SortDropdown from "../../components/search/SortDropdown";
+import MapPreview from "../../components/search/MapPreview";
 
-// UI types for card rendering
-interface ServiceUI {
-  id?: number;
-  name: string;
-  pricePerHour: number; // cents
-  durationMin: number;
-}
+const SERVICE_OPTIONS = ["Deep Clean", "Standard Clean", "Move-out Clean", "Oven Cleaning", "Window Washing", "Carpet Cleaning"];
 
-interface ProviderUI {
+interface CleanerResult {
   id: number;
   name: string;
-  email?: string;
-  phone?: string;
+  bio: string;
+  city: string;
+  state: string;
+  averageRating: number;
+  totalReviews: number;
+  minPrice: number | null;
+  maxPrice: number | null;
+  services: Array<{ id: number; serviceName: string; pricePerHour: number; durationMin: number }>;
+  serviceRadius: number;
+  distanceKm: number | null;
   profileImage: string | null;
-  isVerified?: boolean;
-  profile: {
-    bio?: string;
-    yearsExperience?: string;
-    city?: string;
-    state?: string;
-    zipCode?: string;
-    averageRating?: number;
-    totalReviews?: number;
-    totalBookings?: number;
-    hasInsurance?: boolean;
-    hasVehicle?: boolean;
-    hasEquipment?: boolean;
-  };
-  services: ServiceUI[];
+  latitude?: number | null;
+  longitude?: number | null;
 }
 
+const INITIAL_FILTERS: FilterState = {
+  priceRange: [40, 180],
+  minRating: 0,
+  radiusInKm: 20,
+  selectedServices: [],
+  date: null,
+};
+
 const SearchProviders: React.FC = () => {
-  const navigate = useNavigate();
+  const [filters, setFilters] = useState<FilterState>(INITIAL_FILTERS);
+  const [sortBy, setSortBy] = useState("rating_desc");
+  const [cleaners, setCleaners] = useState<CleanerResult[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [clientLocation, setClientLocation] = useState<{ lat: number | null; lng: number | null }>({ lat: null, lng: null });
 
-  const [providers, setProviders] = useState<ProviderUI[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const fetchCleaners = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
 
-  const [searchTerm, setSearchTerm] = useState("");
-  const [city, setCity] = useState("");
-  const [state, setState] = useState("");
-  const [priceRange, setPriceRange] = useState<[number, number]>([0, 100]); // dollars
-  const [selectedService, setSelectedService] = useState("");
-  const [minRating, setMinRating] = useState(0);
-  const [showFilters, setShowFilters] = useState(false);
+      const params: Record<string, unknown> = {
+        sortBy,
+        minPrice: filters.priceRange[0],
+        maxPrice: filters.priceRange[1],
+        minRating: filters.minRating || undefined,
+      };
 
-  // Load providers (and poll every 10s)
-  useEffect(() => {
-    let timer: number | null = null;
-
-    async function load() {
-      try {
-        setLoading(true);
-        setError(""); // Clear previous errors
-        console.log("🔍 Fetching providers...");
-        const data = await fetchProviders(); // GET /api/providers
-        console.log("✅ Providers fetched:", data.length, "providers");
-       const mapped: ProviderUI[] = data.map((p: ProviderProfile) => ({
-        id: p.id,
-  name: p.user?.name ?? "New Provider",
-  email: undefined,
-  phone: undefined,
-  profileImage: p.user?.profileImage ?? null,
-  isVerified: p.isVerified ?? false,
-  profile: {
-    bio: p.bio ?? "",
-    yearsExperience: p.yearsExperience ?? "",
-    city: p.city ?? "",
-    state: p.state ?? "",
-    zipCode: p.zipCode ?? "",
-    averageRating: p.averageRating ?? undefined,
-    totalReviews: p.totalReviews ?? undefined,
-    totalBookings: p.totalBookings ?? undefined,
-    hasInsurance: p.hasInsurance ?? undefined,
-    hasVehicle: p.hasVehicle ?? undefined,
-    hasEquipment: p.hasEquipment ?? undefined,
-  },
-  services: (p.services ?? []).map((s) => ({
-    id: (s as any).id,              // if included by Prisma
-    name: s.serviceName,            // backend field
-    pricePerHour: s.pricePerHour ?? 0, // cents
-    durationMin: s.durationMin,
-  })),
-}));
-
-        setProviders(mapped);
-        setError("");
-      } catch (e) {
-        console.error("❌ Error loading providers:", e);
-        const errorMessage = e instanceof Error ? e.message : String(e);
-        console.error("Error details:", errorMessage);
-        setError(`Failed to load providers: ${errorMessage}. Please check your backend URL configuration.`);
-      } finally {
-        setLoading(false);
+      if (filters.selectedServices.length) {
+        params.service = filters.selectedServices;
       }
+
+      if (filters.date) {
+        params.date = filters.date.toISOString().split("T")[0];
+      }
+
+      if (clientLocation.lat != null && clientLocation.lng != null) {
+        params.lat = clientLocation.lat;
+        params.lng = clientLocation.lng;
+        params.radiusInKm = filters.radiusInKm;
+      }
+
+      const response = await axios.get<{ providers: CleanerResult[] }>("/api/cleaners/search", { params });
+      setCleaners(response.data.providers ?? []);
+    } catch (requestError) {
+      console.error("Search failed", requestError);
+      setError("Failed to load cleaners. Please try again.");
+    } finally {
+      setLoading(false);
     }
+  }, [filters, sortBy, clientLocation]);
 
-    load(); // initial
-    timer = window.setInterval(load, 10_000); // poll every 10s
+  useEffect(() => {
+    void fetchCleaners();
+  }, [fetchCleaners]);
 
-    const onVis = () => {
-      if (document.visibilityState === "visible") load();
-    };
-    document.addEventListener("visibilitychange", onVis);
+  const handleFilterChange = (changes: Partial<FilterState>) => {
+    setFilters((prev) => ({ ...prev, ...changes }));
+  };
 
-    return () => {
-      if (timer) window.clearInterval(timer);
-      document.removeEventListener("visibilitychange", onVis);
-    };
-  }, []);
+  const handleResetFilters = () => {
+    setFilters(INITIAL_FILTERS);
+  };
 
-  // Static filter options (client-side)
-  const serviceTypes = [
-    "Regular Cleaning",
-    "Deep Cleaning",
-    "Move-out Cleaning",
-    "Office Cleaning",
-    "Carpet Cleaning",
-    "Window Cleaning",
-  ];
-  const australianStates = ["NSW", "VIC", "QLD", "WA", "SA", "TAS", "ACT", "NT"];
-
-  // Client-side filtering until you add /api/providers/search
-  const filteredProviders = providers.filter((provider) => {
-    const matchesSearch =
-      !searchTerm || provider.name.toLowerCase().includes(searchTerm.toLowerCase());
-
-    const matchesState =
-      !state || (provider.profile.state ?? "").toLowerCase() === state.toLowerCase();
-
-    const matchesCity =
-      !city || (provider.profile.city ?? "").toLowerCase().includes(city.toLowerCase());
-
-    const matchesService =
-      !selectedService ||
-      provider.services.some((s) =>
-        s.name.toLowerCase().includes(selectedService.toLowerCase())
-      );
-
-    const minPriceCents =
-      provider.services.length > 0
-        ? Math.min(...provider.services.map((s) => s.pricePerHour ?? 0))
-        : 0;
-
-    const matchesPrice = minPriceCents / 100 <= priceRange[1];
-
-    const rating = provider.profile.averageRating ?? 0;
-    const matchesRating = rating >= minRating;
-
-    return (
-      matchesSearch &&
-      matchesState &&
-      matchesCity &&
-      matchesService &&
-      matchesPrice &&
-      matchesRating
+  const requestLocation = () => {
+    if (!navigator.geolocation) {
+      setError("Geolocation is not supported by your browser.");
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setClientLocation({
+          lat: Number(position.coords.latitude.toFixed(6)),
+          lng: Number(position.coords.longitude.toFixed(6)),
+        });
+      },
+      () => setError("Unable to retrieve your location."),
+      { enableHighAccuracy: true }
     );
-  });
+  };
+
+  const mapLocations = useMemo(
+    () =>
+      cleaners
+        .map((cleaner) => ({
+          id: cleaner.id,
+          lat: cleaner.latitude ?? null,
+          lng: cleaner.longitude ?? null,
+        }))
+        .filter((location) => location.lat != null && location.lng != null),
+    [cleaners]
+  );
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Search Header */}
-        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-          <h1 className="text-3xl font-bold text-gray-900 mb-4">Find Your Perfect Cleaner</h1>
-
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="relative">
-              <FaSearch className="absolute left-3 top-3 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search by name..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
+    <div className="min-h-screen bg-gray-50 py-10">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
+        <div className="bg-white rounded-2xl shadow p-6">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <p className="text-sm text-indigo-600 font-semibold uppercase tracking-wide">Find a cleaner</p>
+              <h1 className="text-3xl font-bold text-gray-900">Search & filter professionals</h1>
             </div>
-
-            <input
-              type="text"
-              placeholder="City..."
-              value={city}
-              onChange={(e) => setCity(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
-
-            <select
-              value={state}
-              onChange={(e) => setState(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              <option value="">All States</option>
-              {australianStates.map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
-            </select>
-
-            <button
-              onClick={() => setShowFilters(!showFilters)}
-              className="flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              <FaFilter className="mr-2" />
-              {showFilters ? "Hide" : "Show"} Filters
-            </button>
+            <SortDropdown value={sortBy} onChange={setSortBy} />
           </div>
-
-          {/* Advanced Filters */}
-          {showFilters && (
-            <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Price Range */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Price Range: ${priceRange[0]} - ${priceRange[1]}/hour
-                  </label>
-                  <div className="flex gap-4">
-                    <input
-                      type="range"
-                      min="0"
-                      max="100"
-                      value={priceRange[0]}
-                      onChange={(e) =>
-                        setPriceRange([Number(e.target.value), priceRange[1]])
-                      }
-                      className="w-full"
-                    />
-                    <input
-                      type="range"
-                      min="0"
-                      max="100"
-                      value={priceRange[1]}
-                      onChange={(e) =>
-                        setPriceRange([priceRange[0], Number(e.target.value)])
-                      }
-                      className="w-full"
-                    />
-                  </div>
-                </div>
-
-                {/* Minimum Rating */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Minimum Rating
-                  </label>
-                  <div className="flex gap-2">
-                    {[0, 3, 4, 4.5].map((rating) => (
-                      <button
-                        key={rating}
-                        onClick={() => setMinRating(rating)}
-                        className={`px-4 py-2 rounded-lg border ${
-                          minRating === rating
-                            ? "bg-blue-600 text-white border-blue-600"
-                            : "bg-white text-gray-700 border-gray-300 hover:border-blue-500"
-                        }`}
-                      >
-                        {rating === 0 ? "Any" : `${rating}+`}{" "}
-                        <FaStar className="inline text-yellow-400" />
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Service Types */}
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Service Type
-                  </label>
-                  <div className="flex flex-wrap gap-2">
-                    {serviceTypes.map((service) => (
-                      <button
-                        key={service}
-                        onClick={() =>
-                          setSelectedService(
-                            selectedService === service ? "" : service
-                          )
-                        }
-                        className={`px-4 py-2 rounded-full border ${
-                          selectedService === service
-                            ? "bg-blue-600 text-white border-blue-600"
-                            : "bg-white text-gray-700 border-gray-300 hover:border-blue-500"
-                        }`}
-                      >
-                        {service}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {error && (
-            <div className="mt-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-              {error}
-            </div>
-          )}
         </div>
 
-        {/* Results */}
-        {loading ? (
-          <div className="text-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-            <p className="text-gray-600 mt-4">Loading providers...</p>
-          </div>
-        ) : (
-          <>
-            <div className="mb-4">
-              <p className="text-gray-600">
-                Found <span className="font-semibold">{filteredProviders.length}</span> cleaners
-              </p>
+        <div className="grid gap-6 lg:grid-cols-[300px,1fr]">
+          <FilterSidebar
+            filters={filters}
+            onChange={handleFilterChange}
+            onReset={handleResetFilters}
+            availableServices={SERVICE_OPTIONS}
+          />
+
+          <div className="space-y-6">
+            <div className="bg-white rounded-2xl shadow px-4 py-3 flex flex-wrap items-center justify-between gap-3 border border-gray-100">
+              <div className="text-sm text-gray-600">
+                {filters.selectedServices.length > 0
+                  ? `Filtering by ${filters.selectedServices.join(", ")}`
+                  : "Showing all services"}
+                {filters.date && ` · Available on ${filters.date.toLocaleDateString()}`}
+              </div>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={requestLocation}
+                  className="inline-flex items-center text-sm text-indigo-600 hover:text-indigo-800 font-medium"
+                >
+                  <FaMapMarkerAlt className="mr-1" /> Use my location
+                </button>
+              </div>
             </div>
 
-            {/* Provider Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredProviders.map((provider) => {
-                const minPriceCents =
-                  provider.services.length > 0
-                    ? Math.min(...provider.services.map((s) => s.pricePerHour ?? 0))
-                    : 0;
-                const minPriceDollars = (minPriceCents / 100).toFixed(2);
+            {error && <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl p-4">{error}</div>}
 
-                return (
-                  <Card key={provider.id} onClick={() => navigate(`/provider/${provider.id}`)}>
-                    <div className="flex items-start space-x-4 cursor-pointer">
+            {loading ? (
+              <Card>
+                <div className="py-12 text-center">
+                  <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-600 mx-auto mb-4" />
+                  <p className="text-gray-600">Searching cleaners…</p>
+                </div>
+              </Card>
+            ) : cleaners.length === 0 ? (
+              <Card>
+                <div className="py-12 text-center text-gray-600">No cleaners match your filters.</div>
+              </Card>
+            ) : (
+              <div className="space-y-4">
+                {cleaners.map((cleaner) => (
+                  <Card key={cleaner.id} className="p-5 shadow hover:shadow-lg transition">
+                    <div className="flex flex-col md:flex-row gap-5">
                       <img
-                        src={provider.profileImage || "/api/placeholder/100/100"}
-                        alt={provider.name}
-                        className="w-16 h-16 rounded-full object-cover"
+                        src={
+                          cleaner.profileImage ??
+                          `https://ui-avatars.com/api/?name=${encodeURIComponent(cleaner.name)}&background=2563eb&color=fff`
+                        }
+                        alt={cleaner.name}
+                        className="w-24 h-24 rounded-2xl object-cover border border-gray-100"
                       />
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between">
-                          <h3 className="text-lg font-semibold text-gray-900">{provider.name}</h3>
-                          {provider.isVerified && (
-                            <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">
-                              ✓ Verified
+                      <div className="flex-1 space-y-3">
+                        <div className="flex flex-wrap items-center gap-3">
+                          <h2 className="text-xl font-semibold text-gray-900">{cleaner.name}</h2>
+                          {cleaner.distanceKm != null && (
+                            <span className="text-sm text-gray-500 flex items-center">
+                              <FaMapMarkerAlt className="mr-1 text-indigo-500" />
+                              {cleaner.distanceKm.toFixed(1)} km away
                             </span>
                           )}
-                        </div>
-
-                        <div className="flex items-center mt-1 text-sm text-gray-600">
-                          <FaMapMarkerAlt className="mr-1" />
-                          {provider.profile.city || "—"}, {provider.profile.state || "—"}
-                        </div>
-
-                        <div className="flex items-center mt-2">
-                          <FaStar className="text-yellow-400 mr-1" />
-                          <span className="font-semibold">
-                            {provider.profile.averageRating?.toFixed(1) || "New"}
+                          <span className="flex items-center text-sm font-medium text-yellow-500">
+                            <FaStar className="mr-1" />
+                            {cleaner.averageRating?.toFixed(1) ?? "New"} ({cleaner.totalReviews ?? 0})
                           </span>
-                          {provider.profile.totalReviews && provider.profile.totalReviews > 0 && (
-                            <span className="text-gray-500 ml-1">
-                              ({provider.profile.totalReviews} reviews)
+                          <span className="flex items-center text-xs uppercase tracking-wide text-green-600 font-semibold">
+                            <FaShieldAlt className="mr-1" /> Verified
+                          </span>
+                        </div>
+                        <p className="text-sm text-gray-600">{cleaner.bio || "No bio provided."}</p>
+                        <div className="flex flex-wrap gap-3 text-sm text-gray-600">
+                          <span>
+                            {cleaner.city}, {cleaner.state}
+                          </span>
+                          {cleaner.minPrice != null && (
+                            <span>
+                              From ${cleaner.minPrice.toFixed(0)}/hr · up to ${cleaner.maxPrice?.toFixed(0) ?? cleaner.minPrice.toFixed(0)}
                             </span>
                           )}
+                          <span>Radius {cleaner.serviceRadius} km</span>
                         </div>
-
-                        <div className="flex items-center mt-2 text-lg font-bold text-blue-600">
-                          {minPriceCents > 0 ? (
-                            <>
-                              From <FaDollarSign className="ml-1" />
-                              {minPriceDollars}/hour
-                            </>
-                          ) : (
-                            <span className="text-gray-500">—</span>
-                          )}
+                        <div className="flex flex-wrap gap-2">
+                          {cleaner.services.slice(0, 6).map((service) => (
+                            <span key={service.id} className="px-3 py-1 rounded-full bg-indigo-50 text-indigo-700 text-xs font-medium">
+                              {service.serviceName}
+                            </span>
+                          ))}
                         </div>
-
-                        <div className="mt-3">
-                          <div className="flex flex-wrap gap-1">
-                            {provider.services.slice(0, 2).map((service, i) => (
-                              <span
-                                key={service.id ?? i}
-                                className="bg-gray-100 text-gray-700 text-xs px-2 py-1 rounded"
-                              >
-                                {service.name}
-                              </span>
-                            ))}
-                            {provider.services.length > 2 && (
-                              <span className="bg-gray-100 text-gray-700 text-xs px-2 py-1 rounded">
-                                +{provider.services.length - 2}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-
-                        {provider.profile.totalBookings && provider.profile.totalBookings > 0 && (
-                          <div className="mt-3 text-sm text-green-600 font-medium">
-                            {provider.profile.totalBookings} bookings completed
-                          </div>
-                        )}
-
-                        <button className="mt-4 w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition-colors">
-                          View Profile & Book
+                      </div>
+                      <div className="flex flex-col justify-between">
+                        <a
+                          href={`/provider/${cleaner.id}`}
+                          className="inline-flex items-center justify-center px-4 py-2 rounded-xl bg-indigo-600 text-white font-semibold hover:bg-indigo-700 transition"
+                        >
+                          View profile
+                        </a>
+                        <button
+                          type="button"
+                          className="mt-2 inline-flex items-center justify-center px-4 py-2 rounded-xl border border-gray-200 text-gray-700 hover:bg-gray-50"
+                        >
+                          Book now
                         </button>
                       </div>
                     </div>
                   </Card>
-                );
-              })}
-            </div>
-
-            {filteredProviders.length === 0 && !loading && (
-              <div className="text-center py-12">
-                <p className="text-gray-500 text-lg">No cleaners found matching your criteria.</p>
-                <p className="text-gray-400 mt-2">Try adjusting your filters or search in a different area.</p>
+                ))}
               </div>
             )}
-          </>
-        )}
+
+            <MapPreview locations={mapLocations} center={clientLocation.lat && clientLocation.lng ? { lat: clientLocation.lat, lng: clientLocation.lng } : null} />
+          </div>
+        </div>
       </div>
     </div>
   );

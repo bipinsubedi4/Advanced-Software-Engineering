@@ -3,6 +3,7 @@ import { z } from "zod";
 import multer from "multer";
 import crypto from "crypto";
 import { v2 as cloudinary } from "cloudinary";
+import { Prisma } from "@prisma/client";
 import { prisma } from "./prisma";
 import { authenticateToken, AuthRequest } from "./middleware";
 
@@ -40,6 +41,8 @@ const wizardSchema = z.object({
   state: z.string().min(1),
   zipCode: z.string().min(1),
   serviceRadius: z.number().int().min(1).max(200),
+  latitude: z.number().min(-90).max(90).optional().nullable(),
+  longitude: z.number().min(-180).max(180).optional().nullable(),
   services: z
     .array(
       z.object({
@@ -146,6 +149,8 @@ router.put("/me/profile", authenticateToken, async (req, res) => {
           state: payload.state,
           zipCode: payload.zipCode,
           serviceRadius: payload.serviceRadius,
+          latitude: payload.latitude ?? profile.latitude,
+          longitude: payload.longitude ?? profile.longitude,
           isActive: true,
           isProfileComplete: true,
         },
@@ -246,6 +251,219 @@ router.post("/me/profile-image", authenticateToken, upload.single("file"), async
   } catch (error) {
     console.error("Profile image upload failed", error);
     res.status(500).json({ error: "Failed to upload profile image" });
+  }
+});
+
+const parseNumber = (value: string | string[] | undefined, fallback?: number) => {
+  if (!value) return fallback;
+  const numeric = Array.isArray(value) ? Number(value[0]) : Number(value);
+  return Number.isFinite(numeric) ? numeric : fallback;
+};
+
+const parseArrayParam = (value: string | string[] | undefined): string[] => {
+  if (!value) return [];
+  if (Array.isArray(value)) {
+    return value.flatMap((entry) => entry.split(",")).map((entry) => entry.trim()).filter(Boolean);
+  }
+  return value
+    .split(",")
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+};
+
+const haversineDistanceKm = (lat1?: number | null, lon1?: number | null, lat2?: number | null, lon2?: number | null) => {
+  if (
+    typeof lat1 !== "number" ||
+    typeof lon1 !== "number" ||
+    typeof lat2 !== "number" ||
+    typeof lon2 !== "number"
+  ) {
+    return null;
+  }
+  const toRad = (deg: number) => (deg * Math.PI) / 180;
+  const R = 6371; // km
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+};
+
+router.get("/search", async (req, res) => {
+  try {
+    const {
+      q,
+      minPrice,
+      maxPrice,
+      minRating,
+      service,
+      date,
+      radiusInKm,
+      lat,
+      lng,
+      sortBy = "rating_desc",
+      page = "1",
+      pageSize = "20",
+    } = req.query;
+
+    const queryString = typeof q === "string" ? q.trim() : "";
+    const serviceFilters = parseArrayParam(service as string | string[]);
+    const minPriceValue = parseNumber(minPrice);
+    const maxPriceValue = parseNumber(maxPrice);
+    const minRatingValue = parseNumber(minRating);
+    const latValue = parseNumber(lat);
+    const lngValue = parseNumber(lng);
+    const radiusValue = parseNumber(radiusInKm);
+    const pageNumber = Math.max(parseNumber(page, 1) ?? 1, 1);
+    const limit = Math.min(Math.max(parseNumber(pageSize, 20) ?? 20, 1), 50);
+
+    const availabilityDay = (() => {
+      if (!date || typeof date !== "string") return null;
+      const parsed = new Date(date);
+      if (Number.isNaN(parsed.getTime())) return null;
+      return parsed.toLocaleDateString("en-US", { weekday: "long" }).toUpperCase();
+    })();
+
+    const andConditions: Prisma.ProviderProfileWhereInput[] = [];
+    if (queryString) {
+      const searchCondition: Prisma.ProviderProfileWhereInput = {
+        OR: [
+          { user: { name: { contains: queryString, mode: "insensitive" } } },
+          { city: { contains: queryString, mode: "insensitive" } },
+          { state: { contains: queryString, mode: "insensitive" } },
+          { bio: { contains: queryString, mode: "insensitive" } },
+        ],
+      };
+      andConditions.push(searchCondition);
+    }
+    if (minRatingValue) {
+      andConditions.push({ averageRating: { gte: minRatingValue } });
+    }
+    if (availabilityDay) {
+      andConditions.push({
+        availability: {
+          some: {
+            dayOfWeek: availabilityDay,
+            isAvailable: true,
+          },
+        },
+      });
+    }
+    if (minPriceValue !== undefined || maxPriceValue !== undefined) {
+      andConditions.push({
+        services: {
+          some: {
+            pricePerHour: {
+              gte: minPriceValue ? Math.round(minPriceValue * 100) : undefined,
+              lte: maxPriceValue ? Math.round(maxPriceValue * 100) : undefined,
+            },
+          },
+        },
+      });
+    }
+    if (serviceFilters.length) {
+      serviceFilters.forEach((serviceName) => {
+        andConditions.push({
+          services: {
+            some: {
+              serviceName: { equals: serviceName, mode: "insensitive" },
+            },
+          },
+        });
+      });
+    }
+
+    const where: Prisma.ProviderProfileWhereInput = {
+      isActive: true,
+      user: { role: "PROVIDER" },
+      AND: andConditions,
+    };
+
+    const providers = await prisma.providerProfile.findMany({
+      where,
+      include: {
+        user: { select: { id: true, name: true, email: true, phone: true, profileImage: true } },
+        services: true,
+        availability: true,
+      },
+      take: limit * 3, // fetch extra to allow distance filtering before pagination
+    });
+
+    const enriched = providers
+      .map((provider) => {
+        const prices = provider.services.map((service) => service.pricePerHour ?? 0);
+        const minServicePrice = prices.length ? Math.min(...prices) / 100 : null;
+        const maxServicePrice = prices.length ? Math.max(...prices) / 100 : null;
+        const distanceKm = haversineDistanceKm(latValue ?? null, lngValue ?? null, provider.latitude, provider.longitude);
+        const availableOnDate = availabilityDay
+          ? provider.availability.some((slot) => slot.dayOfWeek === availabilityDay && slot.isAvailable)
+          : true;
+
+        return {
+          id: provider.id,
+          name: provider.user?.name ?? "New Provider",
+          bio: provider.bio ?? "",
+          city: provider.city ?? "",
+          state: provider.state ?? "",
+          averageRating: provider.averageRating ?? 0,
+          totalReviews: provider.totalReviews ?? 0,
+          minPrice: minServicePrice,
+          maxPrice: maxServicePrice,
+          services: provider.services,
+          serviceRadius: provider.serviceRadius,
+          distanceKm,
+          availableOnDate,
+          profileImage: provider.user?.profileImage ?? null,
+          latitude: provider.latitude,
+          longitude: provider.longitude,
+        };
+      })
+      .filter((provider) => {
+        if (!availabilityDay) return true;
+        return provider.availableOnDate;
+      })
+      .filter((provider) => {
+        if (radiusValue && latValue !== undefined && lngValue !== undefined) {
+          if (provider.distanceKm == null) return false;
+          return provider.distanceKm <= radiusValue;
+        }
+        return true;
+      });
+
+    const sorted = enriched.sort((a, b) => {
+      switch (sortBy) {
+        case "price_asc":
+          return (a.minPrice ?? Infinity) - (b.minPrice ?? Infinity);
+        case "price_desc":
+          return (b.maxPrice ?? 0) - (a.maxPrice ?? 0);
+        case "distance_asc":
+          return (a.distanceKm ?? Infinity) - (b.distanceKm ?? Infinity);
+        case "rating_asc":
+          return (a.averageRating ?? 0) - (b.averageRating ?? 0);
+        case "name_asc":
+          return a.name.localeCompare(b.name);
+        case "rating_desc":
+        default:
+          return (b.averageRating ?? 0) - (a.averageRating ?? 0);
+      }
+    });
+
+    const start = (pageNumber - 1) * limit;
+    const paged = sorted.slice(start, start + limit);
+
+    res.json({
+      success: true,
+      count: paged.length,
+      total: sorted.length,
+      page: pageNumber,
+      pageSize: limit,
+      providers: paged,
+    });
+  } catch (error) {
+    console.error("Cleaner search failed", error);
+    res.status(500).json({ error: "Failed to search cleaners" });
   }
 });
 

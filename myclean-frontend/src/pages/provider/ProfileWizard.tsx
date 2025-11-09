@@ -29,6 +29,8 @@ const initialState: ProfileWizardState = {
   state: "",
   zipCode: "",
   serviceRadius: 10,
+  latitude: null,
+  longitude: null,
   services: [],
   availability: buildDefaultAvailability(),
 };
@@ -93,6 +95,8 @@ const ProfileWizard: React.FC = () => {
         city: profile.city ?? prev.city,
         state: profile.state ?? prev.state,
         zipCode: profile.zipCode ?? prev.zipCode,
+        latitude: profile.latitude ?? prev.latitude,
+        longitude: profile.longitude ?? prev.longitude,
         serviceRadius: profile.serviceRadius ?? prev.serviceRadius,
         services: profile.services
           ? dedupeServices(
@@ -193,6 +197,8 @@ const ProfileWizard: React.FC = () => {
     city: formData.city.trim(),
     state: formData.state.trim(),
     zipCode: formData.zipCode.trim(),
+    latitude: formData.latitude ?? undefined,
+    longitude: formData.longitude ?? undefined,
     serviceRadius: formData.serviceRadius,
     services: formData.services.map((service) => ({
       name: service.name,

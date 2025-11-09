@@ -1,7 +1,10 @@
 import React, { ChangeEvent } from "react";
 import { ProfileWizardState } from "./types";
 
-type LocationFields = Pick<ProfileWizardState, "address" | "city" | "state" | "zipCode" | "serviceRadius">;
+type LocationFields = Pick<
+  ProfileWizardState,
+  "address" | "city" | "state" | "zipCode" | "serviceRadius" | "latitude" | "longitude"
+>;
 
 type Step2LocationProps = {
   data: LocationFields;
@@ -15,6 +18,8 @@ const Step2Location: React.FC<Step2LocationProps> = ({ data, onChange }) => {
     const { name, value } = event.target;
     if (name === "serviceRadius") {
       onChange({ [name]: Number(value) });
+    } else if (name === "latitude" || name === "longitude") {
+      onChange({ [name]: value ? Number(value) : null });
     } else {
       onChange({ [name]: value });
     }
@@ -82,6 +87,50 @@ const Step2Location: React.FC<Step2LocationProps> = ({ data, onChange }) => {
             placeholder="3000"
           />
         </div>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Location Coordinates</label>
+        <div className="grid gap-4 md:grid-cols-2">
+          <input
+            type="number"
+            step="0.000001"
+            name="latitude"
+            value={data.latitude ?? ""}
+            onChange={handleInputChange}
+            placeholder="-37.8136"
+            className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+          />
+          <input
+            type="number"
+            step="0.000001"
+            name="longitude"
+            value={data.longitude ?? ""}
+            onChange={handleInputChange}
+            placeholder="144.9631"
+            className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+          />
+        </div>
+        <button
+          type="button"
+          onClick={() => {
+            if (!navigator.geolocation) return;
+            navigator.geolocation.getCurrentPosition(
+              (position) => {
+                onChange({
+                  latitude: Number(position.coords.latitude.toFixed(6)),
+                  longitude: Number(position.coords.longitude.toFixed(6)),
+                });
+              },
+              () => undefined,
+              { enableHighAccuracy: true }
+            );
+          }}
+          className="mt-2 text-sm text-indigo-600 hover:text-indigo-800 font-medium"
+        >
+          Use my current location
+        </button>
+        <p className="text-xs text-gray-500">Coordinates help us run accurate distance matches.</p>
       </div>
 
       <div>
