@@ -17,6 +17,7 @@ A comprehensive booking management system connecting customers with professional
 | **[README_FEATURES.md](myclean-frontend/README_FEATURES.md)** | Detailed feature documentation |
 | **[PROJECT_SUMMARY.md](PROJECT_SUMMARY.md)** | Implementation overview & highlights |
 | **[DEMO_CHECKLIST.md](DEMO_CHECKLIST.md)** | Pre-presentation testing checklist |
+| **[STRIPE_WEBHOOK_SETUP.md](STRIPE_WEBHOOK_SETUP.md)** | Stripe webhook + email configuration |
 
 ---
 
@@ -428,5 +429,4 @@ Everything is implemented and working. Follow these steps:
 **Built with ❤️ for Software Engineering Project**
 
 *All requested features implemented. Production-ready frontend. Ready for demonstration.* 🚀
-
 

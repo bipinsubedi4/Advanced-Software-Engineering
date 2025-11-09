@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const prisma_1 = require("./prisma");
 const zod_1 = require("zod");
+const mailer_1 = require("./mailer");
 const router = (0, express_1.Router)();
 // Validation schemas
 const createBookingSchema = zod_1.z.object({
@@ -259,8 +260,8 @@ router.patch("/:id/status", async (req, res) => {
         const booking = await prisma_1.prisma.booking.findUnique({
             where: { id: parseInt(id) },
             include: {
-                customer: { select: { id: true, name: true } },
-                provider: { select: { id: true, name: true } },
+                customer: { select: { id: true, name: true, email: true } },
+                provider: { select: { id: true, name: true, email: true } },
                 service: { select: { serviceName: true } },
             },
         });
@@ -276,6 +277,9 @@ router.patch("/:id/status", async (req, res) => {
         else if (status === "CANCELLED") {
             if (booking.customerId !== userId && booking.providerId !== userId) {
                 return res.status(403).json({ error: "Unauthorized to cancel this booking" });
+            }
+            if (booking.providerId === userId && booking.paymentStatus === "PAID") {
+                return res.status(400).json({ error: "Payment already completed. Please issue a refund before cancelling." });
             }
         }
         // Update booking
@@ -294,6 +298,26 @@ router.patch("/:id/status", async (req, res) => {
                     link: "/my-bookings",
                 },
             });
+            if (booking.totalPrice > 0) {
+                await prisma_1.prisma.notification.create({
+                    data: {
+                        userId: booking.customerId,
+                        type: "PAYMENT_REQUIRED",
+                        title: "Payment required",
+                        message: `Please complete payment so ${booking.provider.name} can begin ${booking.service.serviceName}.`,
+                        link: `/payment?bookingId=${booking.id}`,
+                    },
+                });
+                if (booking.customer.email) {
+                    await (0, mailer_1.sendPaymentReminderEmail)({
+                        to: booking.customer.email,
+                        customerName: booking.customer.name,
+                        providerName: booking.provider.name,
+                        serviceName: booking.service.serviceName,
+                        bookingId: booking.id,
+                    });
+                }
+            }
         }
         else if (status === "DECLINED") {
             await prisma_1.prisma.notification.create({

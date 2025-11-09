@@ -157,6 +157,10 @@ router.post("/:jobId/complete", async (req, res) => {
       return res.status(400).json({ error: "Only accepted jobs can be completed" });
     }
 
+    if (booking.totalPrice > 0 && booking.paymentStatus !== "PAID") {
+      return res.status(400).json({ error: "Customer must complete payment before you can mark this job done" });
+    }
+
     const updated = await prisma.booking.update({
       where: { id: jobId },
       data: { status: "COMPLETED" },
@@ -165,7 +169,10 @@ router.post("/:jobId/complete", async (req, res) => {
 
     if (stripeClient && booking.paymentIntentId && !booking.paymentCaptured) {
       try {
-        await stripeClient.paymentIntents.capture(booking.paymentIntentId);
+        const intent = await stripeClient.paymentIntents.retrieve(booking.paymentIntentId);
+        if (intent.status === "requires_capture") {
+          await stripeClient.paymentIntents.capture(booking.paymentIntentId);
+        }
         await prisma.booking.update({
           where: { id: jobId },
           data: { paymentCaptured: true, paymentStatus: "PAID" },

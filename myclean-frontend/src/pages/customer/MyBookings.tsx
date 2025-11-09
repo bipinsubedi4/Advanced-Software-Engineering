@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { FaCalendar, FaClock, FaMapMarkerAlt, FaStar, FaComments } from 'react-icons/fa';
+import { FaCalendar, FaClock, FaMapMarkerAlt, FaStar, FaComments, FaDollarSign } from 'react-icons/fa';
 import { format } from 'date-fns';
 import axios from 'axios';
 import Card from '../../components/Card';
@@ -25,6 +25,7 @@ interface Booking {
   zipCode: string;
   status: string;
   totalPrice: number;
+  paymentStatus?: string;
   specialInstructions?: string | null;
   service: {
     id: number;
@@ -88,6 +89,17 @@ const getStatusClass = (status: string) => {
       return 'bg-gray-100 text-gray-700';
     default:
       return 'bg-gray-100 text-gray-800';
+  }
+};
+
+const getPaymentStatusMeta = (status?: string) => {
+  switch (status) {
+    case 'PAID':
+      return { label: 'Payment complete', className: 'bg-green-100 text-green-800 border border-green-200' };
+    case 'REFUNDED':
+      return { label: 'Refunded', className: 'bg-gray-100 text-gray-800 border border-gray-200' };
+    default:
+      return { label: 'Awaiting payment', className: 'bg-yellow-50 text-yellow-800 border border-yellow-200' };
   }
 };
 
@@ -423,11 +435,16 @@ const MyBookings: React.FC = () => {
           </Card>
         ) : (
           <div className="space-y-4">
-            {filteredBookings.map((booking) => (
-              <Card key={booking.id}>
-                <div className="flex flex-col md:flex-row justify-between">
-                  <div className="flex items-start space-x-4 flex-1">
-                    <img
+            {filteredBookings.map((booking) => {
+              const paymentMeta = getPaymentStatusMeta(booking.paymentStatus);
+              const requiresPayment =
+                booking.status === 'ACCEPTED' && booking.totalPrice > 0 && booking.paymentStatus !== 'PAID';
+
+              return (
+                <Card key={booking.id}>
+                  <div className="flex flex-col md:flex-row justify-between">
+                    <div className="flex items-start space-x-4 flex-1">
+                      <img
                       src={getAvatar(booking.provider.name, booking.provider.profileImage)}
                       alt={booking.provider.name}
                       className="w-16 h-16 rounded-full object-cover"
@@ -483,6 +500,15 @@ const MyBookings: React.FC = () => {
                       )}
 
                       <div className="mt-4 flex flex-wrap gap-3">
+                        {requiresPayment && (
+                          <button
+                            onClick={() => navigate(`/payment?bookingId=${booking.id}`)}
+                            className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                          >
+                            <FaDollarSign className="mr-2" />
+                            Pay Now
+                          </button>
+                        )}
                         <button
                           onClick={() => handleMessageProvider(booking)}
                           className="inline-flex items-center px-4 py-2 border border-blue-600 text-blue-600 rounded-lg hover:bg-blue-50 transition-colors"
@@ -524,10 +550,16 @@ const MyBookings: React.FC = () => {
                       <p className="text-2xl font-semibold text-blue-700">{formatCurrency(booking.totalPrice)}</p>
                       <p className="text-xs text-blue-500 mt-2">Includes GST and service fees</p>
                     </div>
+                    {booking.totalPrice > 0 && (
+                      <div className={`mt-3 px-3 py-2 rounded-lg text-xs font-semibold ${paymentMeta.className}`}>
+                        {paymentMeta.label}
+                      </div>
+                    )}
                   </div>
                 </div>
-              </Card>
-            ))}
+                </Card>
+              );
+            })}
           </div>
         )}
       </div>

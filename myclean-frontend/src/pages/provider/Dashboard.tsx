@@ -24,6 +24,7 @@ interface Booking {
   state: string;
   status: string;
   totalPrice: number;
+  paymentStatus?: string;
   customer: {
     name: string;
     email: string;
@@ -161,7 +162,25 @@ const ProviderDashboard: React.FC = () => {
       showToast('success', 'Job marked as complete. Waiting for client rating.');
     } catch (error) {
       console.error('Error completing booking:', error);
-      showToast('error', 'Failed to mark job complete.');
+      const message = (error as any)?.response?.data?.error ?? 'Failed to mark job complete.';
+      showToast('error', message);
+    }
+  };
+
+  const handleCancelActiveBooking = async (bookingId: number) => {
+    if (!user) return;
+
+    try {
+      await axios.patch(`/api/bookings/${bookingId}/status`, {
+        status: 'CANCELLED',
+        userId: user.id,
+      });
+      fetchData();
+      showToast('success', 'Booking cancelled. Payment was not completed.');
+    } catch (error) {
+      console.error('Error cancelling booking:', error);
+      const message = (error as any)?.response?.data?.error ?? 'Failed to cancel booking. Please try again.';
+      showToast('error', message);
     }
   };
 
@@ -366,8 +385,11 @@ const ProviderDashboard: React.FC = () => {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {activeBookings.map((booking) => (
-                    <div key={booking.id} className="border border-green-200 rounded-lg p-4 bg-green-50">
+                  {activeBookings.map((booking) => {
+                    const awaitingPayment = booking.totalPrice > 0 && booking.paymentStatus !== 'PAID';
+
+                    return (
+                      <div key={booking.id} className="border border-green-200 rounded-lg p-4 bg-green-50">
                       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-3">
                         <div>
                           <p className="text-sm text-green-700 font-semibold">Accepted</p>
@@ -386,12 +408,23 @@ const ProviderDashboard: React.FC = () => {
                         {booking.address}, {booking.city}, {booking.state}
                       </p>
 
+                      {booking.totalPrice > 0 && (
+                        <div className={`inline-flex items-center mt-3 px-3 py-1 rounded-full text-xs font-semibold ${awaitingPayment ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'}`}>
+                          {awaitingPayment ? 'Awaiting customer payment' : 'Payment received'}
+                        </div>
+                      )}
+
                       <div className="mt-4 flex flex-col md:flex-row gap-3">
                         <button
                           onClick={() => handleMarkComplete(booking.id)}
-                          className="flex-1 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                          disabled={awaitingPayment}
+                          className={`flex-1 text-white py-2 rounded-lg font-medium transition-colors ${
+                            awaitingPayment
+                              ? 'bg-blue-300 cursor-not-allowed'
+                              : 'bg-blue-600 hover:bg-blue-700'
+                          }`}
                         >
-                          Mark as Complete
+                          {awaitingPayment ? 'Waiting for payment' : 'Mark as Complete'}
                         </button>
                         <Link
                           to={`/provider/messages?bookingId=${booking.id}`}
@@ -399,9 +432,18 @@ const ProviderDashboard: React.FC = () => {
                         >
                           Open Chat
                         </Link>
+                        {awaitingPayment && (
+                          <button
+                            onClick={() => handleCancelActiveBooking(booking.id)}
+                            className="flex-1 border border-red-500 text-red-600 py-2 rounded-lg hover:bg-red-50 transition-colors font-medium"
+                          >
+                            Cancel Job
+                          </button>
+                        )}
                       </div>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </Card>

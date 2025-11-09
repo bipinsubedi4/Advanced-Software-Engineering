@@ -121,7 +121,7 @@ const Payment: React.FC = () => {
                 </div>
                 <div className="border-t pt-3">
                   <p className="text-gray-500">Total</p>
-                  <p className="text-2xl font-bold text-blue-600">${(booking.totalPrice / 100).toFixed(2)}</p>
+                  <p className="text-2xl font-bold text-blue-600">${booking.totalPrice.toFixed(2)}</p>
                 </div>
               </div>
             ) : (
@@ -177,8 +177,14 @@ const CheckoutForm: React.FC<CheckoutProps> = ({ bookingId, onStatus, onError, o
 
     const paymentIntent = (result as { paymentIntent?: { status?: string } }).paymentIntent;
     if (paymentIntent?.status === 'succeeded') {
-      onStatus('Payment successful!');
-      onSuccess();
+      try {
+        await axios.post('/api/stripe/confirm-payment', { bookingId });
+        onStatus('Payment successful! We notified your cleaner.');
+        onSuccess();
+      } catch (err: any) {
+        console.error('Confirm payment failed', err);
+        onError(err?.response?.data?.error || 'Payment succeeded but we could not update your booking. Please contact support.');
+      }
     } else {
       onStatus('Payment submitted. Awaiting confirmation.');
     }

@@ -11,7 +11,7 @@ import servicesRoute from "./servicesRoute";
 import providersRouter from "./providers";
 import jobsRouter from "./jobs";
 import marketplaceRouter from "./marketplace";
-import stripeRouter from "./stripeRoutes";
+import stripeRouter, { stripeWebhookHandler } from "./stripeRoutes";
 import verificationRouter from "./verification";
 import recurringJobsRouter from "./recurringJobs";
 import availabilityRouter from "./availability";
@@ -82,6 +82,8 @@ app.use(
     credentials: true,
   })
 );
+
+app.post("/api/stripe/webhook", express.raw({ type: "application/json" }), stripeWebhookHandler);
 
 app.use(express.json());
 

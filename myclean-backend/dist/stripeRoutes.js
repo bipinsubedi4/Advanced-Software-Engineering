@@ -3,10 +3,12 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.stripeWebhookHandler = void 0;
 const express_1 = require("express");
 const stripe_1 = __importDefault(require("stripe"));
 const prisma_1 = require("./prisma");
 const zod_1 = require("zod");
+const mailer_1 = require("./mailer");
 const router = (0, express_1.Router)();
 const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY;
 if (!STRIPE_SECRET_KEY) {
@@ -15,6 +17,7 @@ if (!STRIPE_SECRET_KEY) {
 const stripe = STRIPE_SECRET_KEY
     ? new stripe_1.default(STRIPE_SECRET_KEY, { apiVersion: "2024-04-10" })
     : null;
+const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET;
 const connectSchema = zod_1.z.object({
     providerId: zod_1.z.number(),
     refreshUrl: zod_1.z.string().url().optional(),
@@ -71,6 +74,9 @@ const createIntentSchema = zod_1.z.object({
     bookingId: zod_1.z.number(),
     applicationFeePercent: zod_1.z.number().min(0).max(100).optional(),
 });
+const confirmPaymentSchema = zod_1.z.object({
+    bookingId: zod_1.z.number(),
+});
 router.post("/create-payment-intent", async (req, res) => {
     if (!stripe) {
         return res.status(500).json({ error: "Stripe not configured" });
@@ -87,6 +93,12 @@ router.post("/create-payment-intent", async (req, res) => {
         });
         if (!booking) {
             return res.status(404).json({ error: "Booking not found" });
+        }
+        if (booking.status !== "ACCEPTED") {
+            return res.status(400).json({ error: "Booking must be accepted before payment" });
+        }
+        if (booking.paymentStatus === "PAID") {
+            return res.status(400).json({ error: "Booking already paid" });
         }
         const providerProfile = booking.provider.providerProfile;
         if (!providerProfile?.stripeAccountId) {
@@ -120,5 +132,177 @@ router.post("/create-payment-intent", async (req, res) => {
         res.status(400).json({ error: "Unable to create payment intent" });
     }
 });
+router.post("/confirm-payment", async (req, res) => {
+    if (!stripe) {
+        return res.status(500).json({ error: "Stripe not configured" });
+    }
+    try {
+        const payload = confirmPaymentSchema.parse(req.body);
+        const booking = await prisma_1.prisma.booking.findUnique({
+            where: { id: payload.bookingId },
+            include: {
+                customer: { select: { id: true, name: true, email: true } },
+                provider: { select: { id: true, name: true, email: true } },
+                service: { select: { serviceName: true } },
+            },
+        });
+        if (!booking) {
+            return res.status(404).json({ error: "Booking not found" });
+        }
+        if (booking.paymentStatus === "PAID") {
+            return res.json({ success: true, paymentStatus: "PAID" });
+        }
+        if (!booking.paymentIntentId) {
+            return res.status(400).json({ error: "No payment intent found for booking" });
+        }
+        const intent = await stripe.paymentIntents.retrieve(booking.paymentIntentId);
+        if (intent.status !== "succeeded") {
+            return res.status(400).json({ error: "Payment not completed yet", stripeStatus: intent.status });
+        }
+        await prisma_1.prisma.booking.update({
+            where: { id: booking.id },
+            data: {
+                paymentStatus: "PAID",
+                paymentCaptured: true,
+            },
+        });
+        if (booking.providerId) {
+            await prisma_1.prisma.notification.create({
+                data: {
+                    userId: booking.providerId,
+                    type: "PAYMENT_COMPLETED",
+                    title: "Payment received",
+                    message: `${booking.customer?.name ?? "Your client"} completed payment for ${booking.service?.serviceName ?? "a booking"}.`,
+                    link: "/provider/dashboard",
+                },
+            });
+        }
+        if (booking.provider?.email) {
+            await (0, mailer_1.sendPaymentReceivedEmail)({
+                to: booking.provider.email,
+                providerName: booking.provider.name,
+                customerName: booking.customer?.name ?? "Your client",
+                serviceName: booking.service?.serviceName ?? "your service",
+            });
+        }
+        res.json({ success: true, paymentStatus: "PAID" });
+    }
+    catch (error) {
+        console.error("Confirm payment failed", error);
+        res.status(400).json({ error: "Unable to verify payment" });
+    }
+});
+const stripeWebhookHandler = async (req, res) => {
+    if (!stripe) {
+        return res.status(500).json({ error: "Stripe not configured" });
+    }
+    if (!STRIPE_WEBHOOK_SECRET) {
+        console.error("Stripe webhook secret is not configured");
+        return res.status(500).json({ error: "Webhook secret missing" });
+    }
+    const signature = req.headers["stripe-signature"];
+    if (!signature) {
+        return res.status(400).send("Missing Stripe signature");
+    }
+    let event;
+    try {
+        event = stripe.webhooks.constructEvent(req.body, signature, STRIPE_WEBHOOK_SECRET);
+    }
+    catch (err) {
+        const message = err instanceof Error ? err.message : "Unknown webhook error";
+        console.error("Stripe webhook signature verification failed", message);
+        return res.status(400).send(`Webhook Error: ${message}`);
+    }
+    try {
+        switch (event.type) {
+            case "payment_intent.succeeded": {
+                const paymentIntent = event.data.object;
+                const bookingId = paymentIntent.metadata?.bookingId;
+                const parsedId = bookingId ? Number(bookingId) : NaN;
+                if (!bookingId || Number.isNaN(parsedId))
+                    break;
+                const booking = await prisma_1.prisma.booking.findUnique({
+                    where: { id: parsedId },
+                    include: {
+                        customer: { select: { id: true, name: true, email: true } },
+                        provider: { select: { id: true, name: true, email: true } },
+                        service: { select: { serviceName: true } },
+                    },
+                });
+                if (!booking)
+                    break;
+                if (booking.paymentStatus === "PAID")
+                    break;
+                await prisma_1.prisma.booking.update({
+                    where: { id: booking.id },
+                    data: { paymentStatus: "PAID", paymentCaptured: true },
+                });
+                if (booking.providerId) {
+                    await prisma_1.prisma.notification.create({
+                        data: {
+                            userId: booking.providerId,
+                            type: "PAYMENT_COMPLETED",
+                            title: "Payment received",
+                            message: `${booking.customer?.name ?? "Your client"} completed payment for ${booking.service?.serviceName ?? "a booking"}.`,
+                            link: "/provider/dashboard",
+                        },
+                    });
+                }
+                if (booking.provider?.email) {
+                    await (0, mailer_1.sendPaymentReceivedEmail)({
+                        to: booking.provider.email,
+                        providerName: booking.provider.name,
+                        customerName: booking.customer?.name ?? "Your client",
+                        serviceName: booking.service?.serviceName ?? "your service",
+                    });
+                }
+                break;
+            }
+            case "payment_intent.payment_failed": {
+                const paymentIntent = event.data.object;
+                const bookingId = paymentIntent.metadata?.bookingId;
+                const parsedId = bookingId ? Number(bookingId) : NaN;
+                if (!bookingId || Number.isNaN(parsedId))
+                    break;
+                const booking = await prisma_1.prisma.booking.findUnique({
+                    where: { id: parsedId },
+                    include: {
+                        customer: { select: { id: true, name: true, email: true } },
+                    },
+                });
+                if (!booking)
+                    break;
+                await prisma_1.prisma.booking.update({
+                    where: { id: booking.id },
+                    data: { paymentStatus: "PENDING" },
+                });
+                await prisma_1.prisma.notification.create({
+                    data: {
+                        userId: booking.customerId,
+                        type: "PAYMENT_FAILED",
+                        title: "Payment attempt failed",
+                        message: "Your recent payment attempt did not succeed. Please try another card.",
+                        link: `/payment?bookingId=${booking.id}`,
+                    },
+                });
+                if (booking.customer?.email) {
+                    await (0, mailer_1.sendPaymentFailedEmail)({
+                        to: booking.customer.email,
+                        customerName: booking.customer.name,
+                    });
+                }
+                break;
+            }
+            default:
+                break;
+        }
+        res.json({ received: true });
+    }
+    catch (error) {
+        console.error("Stripe webhook handling failed", error);
+        res.status(500).send("Webhook handler error");
+    }
+};
+exports.stripeWebhookHandler = stripeWebhookHandler;
 exports.default = router;
 //# sourceMappingURL=stripeRoutes.js.map

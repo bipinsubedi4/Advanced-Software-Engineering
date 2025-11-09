@@ -1,6 +1,7 @@
 import { Router, Request, Response } from "express";
 import { prisma } from "./prisma";
 import { z } from "zod";
+import { sendPaymentReminderEmail } from "./mailer";
 
 const router = Router();
 
@@ -277,8 +278,8 @@ router.patch("/:id/status", async (req: Request, res: Response) => {
     const booking = await prisma.booking.findUnique({
       where: { id: parseInt(id) },
       include: {
-        customer: { select: { id: true, name: true } },
-        provider: { select: { id: true, name: true } },
+        customer: { select: { id: true, name: true, email: true } },
+        provider: { select: { id: true, name: true, email: true } },
         service: { select: { serviceName: true } },
       },
     });
@@ -295,6 +296,10 @@ router.patch("/:id/status", async (req: Request, res: Response) => {
     } else if (status === "CANCELLED") {
       if (booking.customerId !== userId && booking.providerId !== userId) {
         return res.status(403).json({ error: "Unauthorized to cancel this booking" });
+      }
+
+      if (booking.providerId === userId && booking.paymentStatus === "PAID") {
+        return res.status(400).json({ error: "Payment already completed. Please issue a refund before cancelling." });
       }
     }
 
@@ -315,6 +320,28 @@ router.patch("/:id/status", async (req: Request, res: Response) => {
           link: "/my-bookings",
         },
       });
+
+      if (booking.totalPrice > 0) {
+        await prisma.notification.create({
+          data: {
+            userId: booking.customerId,
+            type: "PAYMENT_REQUIRED",
+            title: "Payment required",
+            message: `Please complete payment so ${booking.provider.name} can begin ${booking.service.serviceName}.`,
+            link: `/payment?bookingId=${booking.id}`,
+          },
+        });
+
+        if (booking.customer.email) {
+          await sendPaymentReminderEmail({
+            to: booking.customer.email,
+            customerName: booking.customer.name,
+            providerName: booking.provider.name,
+            serviceName: booking.service.serviceName,
+            bookingId: booking.id,
+          });
+        }
+      }
     } else if (status === "DECLINED") {
       await prisma.notification.create({
         data: {
