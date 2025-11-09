@@ -293,35 +293,33 @@ const haversineDistanceKm = (lat1?: number | null, lon1?: number | null, lat2?: 
 
 router.get("/search", async (req, res) => {
   try {
-    const {
-      q,
-      minPrice,
-      maxPrice,
-      minRating,
-      service,
-      date,
-      radiusInKm,
-      lat,
-      lng,
-      sortBy = "rating_desc",
-      page = "1",
-      pageSize = "20",
-    } = req.query;
+    const qParam = req.query.q as undefined | string | string[];
+    const minPriceParam = req.query.minPrice as undefined | string | string[];
+    const maxPriceParam = req.query.maxPrice as undefined | string | string[];
+    const minRatingParam = req.query.minRating as undefined | string | string[];
+    const serviceParam = req.query.service as undefined | string | string[];
+    const dateParam = req.query.date as undefined | string | string[];
+    const radiusParam = req.query.radiusInKm as undefined | string | string[];
+    const latParam = req.query.lat as undefined | string | string[];
+    const lngParam = req.query.lng as undefined | string | string[];
+    const sortByParam = (req.query.sortBy as undefined | string) ?? "rating_desc";
+    const pageParam = (req.query.page as undefined | string) ?? "1";
+    const pageSizeParam = (req.query.pageSize as undefined | string) ?? "20";
 
-    const queryString = typeof q === "string" ? q.trim() : "";
-    const serviceFilters = parseArrayParam(service as string | string[]);
-    const minPriceValue = parseNumber(minPrice);
-    const maxPriceValue = parseNumber(maxPrice);
-    const minRatingValue = parseNumber(minRating);
-    const latValue = parseNumber(lat);
-    const lngValue = parseNumber(lng);
-    const radiusValue = parseNumber(radiusInKm);
-    const pageNumber = Math.max(parseNumber(page, 1) ?? 1, 1);
-    const limit = Math.min(Math.max(parseNumber(pageSize, 20) ?? 20, 1), 50);
+    const queryString = typeof qParam === "string" ? qParam.trim() : "";
+    const serviceFilters = parseArrayParam(serviceParam);
+    const minPriceValue = parseNumber(minPriceParam);
+    const maxPriceValue = parseNumber(maxPriceParam);
+    const minRatingValue = parseNumber(minRatingParam);
+    const latValue = parseNumber(latParam);
+    const lngValue = parseNumber(lngParam);
+    const radiusValue = parseNumber(radiusParam);
+    const pageNumber = Math.max(parseNumber(pageParam, 1) ?? 1, 1);
+    const limit = Math.min(Math.max(parseNumber(pageSizeParam, 20) ?? 20, 1), 50);
 
     const availabilityDay = (() => {
-      if (!date || typeof date !== "string") return null;
-      const parsed = new Date(date);
+      if (!dateParam || typeof dateParam !== "string") return null;
+      const parsed = new Date(dateParam);
       if (Number.isNaN(parsed.getTime())) return null;
       return parsed.toLocaleDateString("en-US", { weekday: "long" }).toUpperCase();
     })();
@@ -433,7 +431,7 @@ router.get("/search", async (req, res) => {
       });
 
     const sorted = enriched.sort((a, b) => {
-      switch (sortBy) {
+      switch (sortByParam) {
         case "price_asc":
           return (a.minPrice ?? Infinity) - (b.minPrice ?? Infinity);
         case "price_desc":
