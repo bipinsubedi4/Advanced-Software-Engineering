@@ -21,9 +21,9 @@ const defaultCenter = { lat: -37.8136, lng: 144.9631 };
 
 const MapPreview: React.FC<MapPreviewProps> = ({ locations, center }) => {
   const apiKey = process.env.REACT_APP_GOOGLE_MAPS_API_KEY;
-  const hasValidData = Boolean(apiKey && locations.some(isValidLocation));
+  const hasValidLocations = locations.some(isValidLocation);
 
-  const { isLoaded } = useJsApiLoader({
+  const { isLoaded, loadError } = useJsApiLoader({
     id: "google-map-script",
     googleMapsApiKey: apiKey ?? "",
   });
@@ -31,17 +31,19 @@ const MapPreview: React.FC<MapPreviewProps> = ({ locations, center }) => {
   const firstValidLocation = React.useMemo(() => locations.find(isValidLocation), [locations]);
   const resolvedCenter = center ?? (firstValidLocation ? { lat: firstValidLocation.lat, lng: firstValidLocation.lng } : defaultCenter);
 
-  if (!apiKey || !hasValidData) {
+  if (!apiKey) {
     return (
       <div className="bg-white border border-gray-100 rounded-2xl shadow p-4 text-sm text-gray-500">
-        Add a valid `REACT_APP_GOOGLE_MAPS_API_KEY` and cleaners with latitude/longitude to see the interactive map.
+        Add a valid `REACT_APP_GOOGLE_MAPS_API_KEY` in your environment configuration to enable the interactive map.
       </div>
     );
   }
 
   return (
     <div className="bg-white border border-gray-100 rounded-2xl shadow p-2">
-      {isLoaded ? (
+      {loadError ? (
+        <div className="p-6 text-center text-red-600 text-sm">Unable to load Google Maps. Please verify your API key configuration.</div>
+      ) : isLoaded ? (
         <GoogleMap
           mapContainerStyle={containerStyle}
           center={resolvedCenter}
@@ -60,6 +62,11 @@ const MapPreview: React.FC<MapPreviewProps> = ({ locations, center }) => {
         </GoogleMap>
       ) : (
         <div className="p-6 text-center text-gray-500 text-sm">Loading map…</div>
+      )}
+      {!hasValidLocations && (
+        <div className="px-4 py-3 text-center text-sm text-gray-500 border-t border-gray-100">
+          Add latitude and longitude to provider profiles to show their pins on the map.
+        </div>
       )}
     </div>
   );
