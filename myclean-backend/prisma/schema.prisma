@@ -7,6 +7,31 @@ generator client {
   provider = "prisma-client-js"
 }
 
+enum PublicJobStatus {
+  BIDDING
+  CLOSED
+}
+
+enum PublicJobBidStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+}
+
+enum VerificationStatus {
+  NOT_SUBMITTED
+  PENDING_REVIEW
+  APPROVED
+  REJECTED
+}
+
+enum RecurringFrequency {
+  ONE_TIME
+  WEEKLY
+  BIWEEKLY
+  MONTHLY
+}
+
 // User model - for both customers and providers
 model User {
   id                Int                @id @default(autoincrement())
@@ -29,6 +54,11 @@ model User {
   notifications     Notification[]
   cleanerRatingsReceived CleanerRating[] @relation("CleanerRatingsProvider")
   cleanerRatingsGiven CleanerRating[]    @relation("CleanerRatingsCustomer")
+  publicJobs        PublicJob[]        @relation("ClientPublicJobs")
+  publicJobBids     PublicJobBid[]
+  availabilityBlocks CleanerAvailability[]
+  recurringJobsCustomer RecurringJob[] @relation("RecurringCustomer")
+  recurringJobsProvider RecurringJob[] @relation("RecurringProvider")
 }
 
 // Provider-specific information
@@ -55,6 +85,12 @@ model ProviderProfile {
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
   insuranceProvider String?
+  stripeAccountId   String?
+  stripeChargesEnabledAt DateTime?
+  verificationStatus VerificationStatus @default(NOT_SUBMITTED)
+  verificationDocumentUrl String?
+  verificationSubmittedAt DateTime?
+  verificationReviewedAt DateTime?
 
   
   // Relations
@@ -79,6 +115,7 @@ model ProviderService {
   // Relations
   provider        ProviderProfile @relation(fields: [providerId], references: [id], onDelete: Cascade)
   bookings        Booking[]
+  recurringJobs   RecurringJob[]
 }
 
 // Provider availability schedule
@@ -132,6 +169,12 @@ model Booking {
   review            Review?
   cleanerRating     CleanerRating?
   messages          Message[]
+  publicJob         PublicJob?       @relation("PublicJobBooking", fields: [publicJobId], references: [id])
+  publicJobId       Int?
+  paymentIntentId   String?
+  paymentCaptured   Boolean          @default(false)
+  recurringJob      RecurringJob?    @relation("RecurringJobBookings", fields: [recurringJobId], references: [id])
+  recurringJobId    Int?
 }
 
 // Reviews and ratings
@@ -193,4 +236,82 @@ model CleanerRating {
   booking     Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
   cleaner     User     @relation("CleanerRatingsProvider", fields: [cleanerId], references: [id], onDelete: Cascade)
   customer    User     @relation("CleanerRatingsCustomer", fields: [customerId], references: [id], onDelete: Cascade)
+}
+
+model PublicJob {
+  id           Int              @id @default(autoincrement())
+  clientId     Int
+  title        String
+  description  String
+  serviceType  String
+  preferredDate DateTime?
+  preferredStartTime String?
+  preferredEndTime   String?
+  city         String
+  state        String
+  postalCode   String
+  budgetMin    Int?
+  budgetMax    Int?
+  status       PublicJobStatus  @default(BIDDING)
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  client       User             @relation("ClientPublicJobs", fields: [clientId], references: [id], onDelete: Cascade)
+  bids         PublicJobBid[]
+  bookings     Booking[]         @relation("PublicJobBooking")
+}
+
+model PublicJobBid {
+  id           Int                @id @default(autoincrement())
+  publicJobId  Int
+  cleanerId    Int
+  message      String?
+  proposedPrice Int?
+  status       PublicJobBidStatus @default(PENDING)
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+
+  publicJob    PublicJob          @relation(fields: [publicJobId], references: [id], onDelete: Cascade)
+  cleaner      User               @relation(fields: [cleanerId], references: [id], onDelete: Cascade)
+}
+
+model RecurringJob {
+  id           Int               @id @default(autoincrement())
+  customerId   Int
+  providerId   Int
+  serviceId    Int
+  frequency    RecurringFrequency
+  startDate    DateTime
+  endDate      DateTime?
+  timezone     String             @default("UTC")
+  notes        String?
+  nextOccurrence DateTime?
+  isActive     Boolean            @default(true)
+  startTime    String
+  endTime      String
+  address      String
+  city         String
+  state        String
+  zipCode      String
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+
+  customer     User               @relation("RecurringCustomer", fields: [customerId], references: [id])
+  provider     User               @relation("RecurringProvider", fields: [providerId], references: [id])
+  service      ProviderService    @relation(fields: [serviceId], references: [id])
+  bookings     Booking[]          @relation("RecurringJobBookings")
+}
+
+model CleanerAvailability {
+  id         Int      @id @default(autoincrement())
+  cleanerId  Int
+  dayOfWeek  Int
+  startTime  String
+  endTime    String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  cleaner    User     @relation(fields: [cleanerId], references: [id], onDelete: Cascade)
+
+  @@index([cleanerId, dayOfWeek])
 }

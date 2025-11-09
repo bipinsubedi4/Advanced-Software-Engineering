@@ -10,6 +10,12 @@ import reviewsRouter from "./reviews";
 import servicesRoute from "./servicesRoute";
 import providersRouter from "./providers";
 import jobsRouter from "./jobs";
+import marketplaceRouter from "./marketplace";
+import stripeRouter from "./stripeRoutes";
+import verificationRouter from "./verification";
+import recurringJobsRouter from "./recurringJobs";
+import availabilityRouter from "./availability";
+import { startRecurringJobProcessor } from "./cron/recurringJobProcessor";
 import { authenticateToken, AuthRequest } from "./middleware";
 import { initializeSocket } from "./socket";
 
@@ -86,7 +92,12 @@ app.use("/api/auth", authRouter);
 app.use("/api/providers", providersRouter);
 app.use("/api/bookings", bookingsRouter);
 app.use("/api/reviews", reviewsRouter);
+app.use("/api/jobs", marketplaceRouter);
 app.use("/api/jobs", jobsRouter);
+app.use("/api/jobs", recurringJobsRouter);
+app.use("/api/stripe", stripeRouter);
+app.use("/api", verificationRouter);
+app.use("/api", availabilityRouter);
 
 // Example protected route
 app.get("/api/users", authenticateToken, async (req: Request, res: Response) => {
@@ -240,6 +251,8 @@ app.post("/api/messages", async (req: Request, res: Response) => {
     res.status(500).json({ error: "Failed to send message" });
   }
 });
+
+startRecurringJobProcessor();
 
 const port = Number(process.env.PORT || 4000);
 httpServer.listen(port, "0.0.0.0", () => {
