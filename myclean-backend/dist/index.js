@@ -14,6 +14,7 @@ const bookings_1 = __importDefault(require("./bookings"));
 const reviews_1 = __importDefault(require("./reviews"));
 const servicesRoute_1 = __importDefault(require("./servicesRoute"));
 const providers_1 = __importDefault(require("./providers"));
+const jobs_1 = __importDefault(require("./jobs"));
 const middleware_1 = require("./middleware");
 const socket_1 = require("./socket");
 const app = (0, express_1.default)();
@@ -59,6 +60,7 @@ app.use("/api/auth", auth_1.default);
 app.use("/api/providers", providers_1.default);
 app.use("/api/bookings", bookings_1.default);
 app.use("/api/reviews", reviews_1.default);
+app.use("/api/jobs", jobs_1.default);
 // Example protected route
 app.get("/api/users", middleware_1.authenticateToken, async (req, res) => {
     const user = req.user; // safely cast when you need it

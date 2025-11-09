@@ -9,6 +9,7 @@ import bookingsRouter from "./bookings";
 import reviewsRouter from "./reviews";
 import servicesRoute from "./servicesRoute";
 import providersRouter from "./providers";
+import jobsRouter from "./jobs";
 import { authenticateToken, AuthRequest } from "./middleware";
 import { initializeSocket } from "./socket";
 
@@ -85,6 +86,7 @@ app.use("/api/auth", authRouter);
 app.use("/api/providers", providersRouter);
 app.use("/api/bookings", bookingsRouter);
 app.use("/api/reviews", reviewsRouter);
+app.use("/api/jobs", jobsRouter);
 
 // Example protected route
 app.get("/api/users", authenticateToken, async (req: Request, res: Response) => {

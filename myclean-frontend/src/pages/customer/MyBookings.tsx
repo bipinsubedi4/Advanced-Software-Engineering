@@ -7,6 +7,13 @@ import Modal from '../../components/Modal';
 import { useAuth } from '../../context/AuthContext';
 import { useLocation, useNavigate } from 'react-router-dom';
 
+interface CleanerRating {
+  id: number;
+  rating: number;
+  comment?: string | null;
+  createdAt: string;
+}
+
 interface Booking {
   id: number;
   bookingDate: string;
@@ -36,6 +43,7 @@ interface Booking {
     name: string;
   };
   review?: any;
+  cleanerRating?: CleanerRating | null;
 }
 
 interface Message {
@@ -53,6 +61,7 @@ const STATUS_FILTERS = [
   { key: 'PENDING', label: 'Pending' },
   { key: 'ACCEPTED', label: 'Accepted' },
   { key: 'COMPLETED', label: 'Completed' },
+  { key: 'RATED', label: 'Rated' },
   { key: 'CANCELLED', label: 'Cancelled' },
   { key: 'DECLINED', label: 'Declined' },
 ] as const;
@@ -71,6 +80,8 @@ const getStatusClass = (status: string) => {
       return 'bg-blue-100 text-blue-800';
     case 'COMPLETED':
       return 'bg-green-100 text-green-800';
+    case 'RATED':
+      return 'bg-green-100 text-green-900';
     case 'CANCELLED':
       return 'bg-red-100 text-red-800';
     case 'DECLINED':
@@ -88,6 +99,8 @@ const statusLabel = (status: string) => {
       return 'Accepted';
     case 'COMPLETED':
       return 'Completed';
+    case 'RATED':
+      return 'Rated';
     case 'CANCELLED':
       return 'Cancelled';
     case 'DECLINED':
@@ -122,7 +135,6 @@ const MyBookings: React.FC = () => {
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [rating, setRating] = useState(0);
   const [review, setReview] = useState('');
-  const [reviewPhotos, setReviewPhotos] = useState<File[]>([]);
   const [message, setMessage] = useState('');
   const [bookingMessages, setBookingMessages] = useState<Message[]>([]);
   const [messagesLoading, setMessagesLoading] = useState(false);
@@ -131,6 +143,7 @@ const MyBookings: React.FC = () => {
   const [newTime, setNewTime] = useState('');
   const [cancelReason, setCancelReason] = useState('');
   const [pageMessage, setPageMessage] = useState<{ type: 'success' | 'error' | 'info'; text: string } | null>(null);
+  const [ratingSubmitting, setRatingSubmitting] = useState(false);
 
   useEffect(() => {
     if (bookingState?.bookingSuccess) {
@@ -181,17 +194,60 @@ const MyBookings: React.FC = () => {
     setSelectedBooking(booking);
     setRating(0);
     setReview('');
-    setReviewPhotos([]);
     setShowReviewModal(true);
   };
 
-  const submitReview = (e: React.FormEvent) => {
+  const submitReview = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log({ bookingId: selectedBooking?.id, rating, review, reviewPhotos });
-    setShowReviewModal(false);
-    setRating(0);
-    setReview('');
-    setReviewPhotos([]);
+    if (!selectedBooking || !user) return;
+    if (rating < 1) {
+      alert('Please choose a rating before submitting.');
+      return;
+    }
+
+    try {
+      setRatingSubmitting(true);
+      const response = await axios.post(`/api/jobs/${selectedBooking.id}/rate`, {
+        customerId: user.id,
+        rating,
+        comment: review.trim() || undefined,
+      });
+
+      const newRating: CleanerRating | undefined = response.data?.rating;
+
+      setBookings((prev) =>
+        prev.map((booking) =>
+          booking.id === selectedBooking.id
+            ? {
+                ...booking,
+                status: 'RATED',
+                cleanerRating: newRating
+                  ? {
+                      id: newRating.id,
+                      rating: newRating.rating,
+                      comment: newRating.comment,
+                      createdAt: newRating.createdAt,
+                    }
+                  : {
+                      id: Date.now(),
+                      rating,
+                      comment: review.trim(),
+                      createdAt: new Date().toISOString(),
+                    },
+              }
+            : booking
+        )
+      );
+
+      setShowReviewModal(false);
+      setRating(0);
+      setReview('');
+    } catch (err) {
+      console.error('Failed to submit rating', err);
+      alert('Failed to submit rating. Please try again.');
+    } finally {
+      setRatingSubmitting(false);
+    }
   };
 
   const loadMessages = async (booking: Booking) => {
@@ -409,6 +465,23 @@ const MyBookings: React.FC = () => {
                         </div>
                       )}
 
+                      {booking.cleanerRating && (
+                        <div className="mt-4 bg-green-50 border border-green-100 rounded-lg p-3">
+                          <p className="text-sm font-semibold text-green-800">Your rating</p>
+                          <div className="flex items-center text-yellow-500 text-xl">
+                            {[1, 2, 3, 4, 5].map((star) => (
+                              <span key={star}>{star <= (booking.cleanerRating?.rating ?? 0) ? '★' : '☆'}</span>
+                            ))}
+                            <span className="ml-2 text-sm text-green-700">
+                              {booking.cleanerRating.rating} / 5
+                            </span>
+                          </div>
+                          {booking.cleanerRating.comment && (
+                            <p className="text-sm text-green-700 mt-2">&ldquo;{booking.cleanerRating.comment}&rdquo;</p>
+                          )}
+                        </div>
+                      )}
+
                       <div className="mt-4 flex flex-wrap gap-3">
                         <button
                           onClick={() => handleMessageProvider(booking)}
@@ -432,13 +505,13 @@ const MyBookings: React.FC = () => {
                           Cancel Booking
                         </button>
 
-                        {booking.status === 'COMPLETED' && !booking.review && (
+                        {booking.status === 'COMPLETED' && !booking.cleanerRating && (
                           <button
                             onClick={() => handleReview(booking)}
                             className="inline-flex items-center px-4 py-2 bg-yellow-100 text-yellow-800 rounded-lg hover:bg-yellow-200 transition-colors"
                           >
                             <FaStar className="mr-2" />
-                            Leave Review
+                            Rate Your Cleaner
                           </button>
                         )}
                       </div>
@@ -485,27 +558,16 @@ const MyBookings: React.FC = () => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Your Review</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Share more details <span className="text-gray-400">(optional)</span>
+            </label>
             <textarea
               value={review}
               onChange={(e) => setReview(e.target.value)}
               rows={4}
-              required
-              placeholder="Share your experience..."
+              placeholder="Tell us about punctuality, communication, and quality..."
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Add Photos (Optional)</label>
-            <input
-              type="file"
-              accept="image/*"
-              multiple
-              onChange={(e) => setReviewPhotos(Array.from(e.target.files || []))}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
-            <p className="text-sm text-gray-500 mt-1">Upload photos of the completed work</p>
           </div>
 
           <div className="flex gap-4">
@@ -518,10 +580,12 @@ const MyBookings: React.FC = () => {
             </button>
             <button
               type="submit"
-              disabled={rating === 0}
-              className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={ratingSubmitting || rating < 1}
+              className={`flex-1 px-6 py-3 rounded-lg font-semibold text-white ${
+                ratingSubmitting || rating < 1 ? 'bg-blue-300 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'
+              } transition-colors`}
             >
-              Submit Review
+              {ratingSubmitting ? 'Submitting...' : 'Submit Rating'}
             </button>
           </div>
         </form>

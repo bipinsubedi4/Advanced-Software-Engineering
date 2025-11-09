@@ -155,6 +155,7 @@ router.get("/user/:userId", async (req: Request, res: Response) => {
         },
         service: true,
         review: true,
+        cleanerRating: true,
       },
       orderBy: { bookingDate: "desc" },
     });
@@ -182,6 +183,7 @@ router.get("/user/:userId", async (req: Request, res: Response) => {
         pricePerHour: booking.service.pricePerHour / 100,
       },
       review: booking.review,
+      cleanerRating: booking.cleanerRating,
     }));
 
     res.json({
@@ -211,6 +213,7 @@ router.get("/:id", async (req: Request, res: Response) => {
         },
         service: true,
         review: true,
+        cleanerRating: true,
         messages: {
           include: {
             sender: {
@@ -251,6 +254,7 @@ router.get("/:id", async (req: Request, res: Response) => {
           pricePerHour: booking.service.pricePerHour / 100,
         },
         review: booking.review,
+        cleanerRating: booking.cleanerRating,
         messages: booking.messages,
       },
     });
@@ -266,7 +270,7 @@ router.patch("/:id/status", async (req: Request, res: Response) => {
     const { id } = req.params;
     const { status, userId } = req.body;
 
-    if (!["ACCEPTED", "DECLINED", "CANCELLED", "COMPLETED"].includes(status)) {
+    if (!["ACCEPTED", "DECLINED", "CANCELLED", "COMPLETED", "RATED"].includes(status)) {
       return res.status(400).json({ error: "Invalid status" });
     }
 
@@ -387,4 +391,3 @@ router.delete("/:id", async (req: Request, res: Response) => {
 });
 
 export default router;
-

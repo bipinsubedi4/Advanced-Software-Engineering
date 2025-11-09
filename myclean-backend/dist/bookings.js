@@ -144,6 +144,7 @@ router.get("/user/:userId", async (req, res) => {
                 },
                 service: true,
                 review: true,
+                cleanerRating: true,
             },
             orderBy: { bookingDate: "desc" },
         });
@@ -170,6 +171,7 @@ router.get("/user/:userId", async (req, res) => {
                 pricePerHour: booking.service.pricePerHour / 100,
             },
             review: booking.review,
+            cleanerRating: booking.cleanerRating,
         }));
         res.json({
             success: true,
@@ -197,6 +199,7 @@ router.get("/:id", async (req, res) => {
                 },
                 service: true,
                 review: true,
+                cleanerRating: true,
                 messages: {
                     include: {
                         sender: {
@@ -235,6 +238,7 @@ router.get("/:id", async (req, res) => {
                     pricePerHour: booking.service.pricePerHour / 100,
                 },
                 review: booking.review,
+                cleanerRating: booking.cleanerRating,
                 messages: booking.messages,
             },
         });
@@ -249,7 +253,7 @@ router.patch("/:id/status", async (req, res) => {
     try {
         const { id } = req.params;
         const { status, userId } = req.body;
-        if (!["ACCEPTED", "DECLINED", "CANCELLED", "COMPLETED"].includes(status)) {
+        if (!["ACCEPTED", "DECLINED", "CANCELLED", "COMPLETED", "RATED"].includes(status)) {
             return res.status(400).json({ error: "Invalid status" });
         }
         const booking = await prisma_1.prisma.booking.findUnique({

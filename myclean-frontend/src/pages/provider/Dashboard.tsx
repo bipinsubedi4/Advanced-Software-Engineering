@@ -7,6 +7,13 @@ import Toast from '../../components/Toast';
 import { format } from 'date-fns';
 import axios from 'axios';
 
+interface CleanerRating {
+  id: number;
+  rating: number;
+  comment?: string | null;
+  createdAt: string;
+}
+
 interface Booking {
   id: number;
   bookingDate: string;
@@ -25,6 +32,7 @@ interface Booking {
   service: {
     name: string;
   };
+  cleanerRating?: CleanerRating | null;
 }
 
 interface Notification {
@@ -82,7 +90,7 @@ const ProviderDashboard: React.FC = () => {
       setNotifications(allNotifications.filter((n: Notification) => !n.isRead).slice(0, 3));
 
       // Calculate stats
-      const completed = allBookings.filter((b: Booking) => b.status === 'COMPLETED');
+      const completed = allBookings.filter((b: Booking) => b.status === 'COMPLETED' || b.status === 'RATED');
       const accepted = allBookings.filter((b: Booking) => b.status === 'ACCEPTED');
 
       const totalEarnings = completed.reduce((sum: number, b: Booking) => sum + b.totalPrice, 0);
@@ -116,9 +124,8 @@ const ProviderDashboard: React.FC = () => {
     if (!user) return;
 
     try {
-      await axios.patch(`/api/bookings/${bookingId}/status`, {
-        status: 'ACCEPTED',
-        userId: user.id,
+      await axios.post(`/api/jobs/${bookingId}/accept`, {
+        cleanerId: user.id,
       });
       fetchData(); // Refresh data
       showToast('success', 'Booking accepted successfully!');
@@ -132,9 +139,8 @@ const ProviderDashboard: React.FC = () => {
     if (!user) return;
 
     try {
-      await axios.patch(`/api/bookings/${bookingId}/status`, {
-        status: 'DECLINED',
-        userId: user.id,
+      await axios.post(`/api/jobs/${bookingId}/decline`, {
+        cleanerId: user.id,
       });
       fetchData(); // Refresh data
       showToast('success', 'Booking declined.');
@@ -144,8 +150,24 @@ const ProviderDashboard: React.FC = () => {
     }
   };
 
+  const handleMarkComplete = async (bookingId: number) => {
+    if (!user) return;
+
+    try {
+      await axios.post(`/api/jobs/${bookingId}/complete`, {
+        cleanerId: user.id,
+      });
+      fetchData();
+      showToast('success', 'Job marked as complete. Waiting for client rating.');
+    } catch (error) {
+      console.error('Error completing booking:', error);
+      showToast('error', 'Failed to mark job complete.');
+    }
+  };
+
   const pendingBookings = bookings.filter(b => b.status === 'PENDING');
-  const upcomingBookings = bookings.filter(b => b.status === 'ACCEPTED');
+  const activeBookings = bookings.filter(b => b.status === 'ACCEPTED');
+  const upcomingBookings = activeBookings;
 
   if (loading) {
     return (
@@ -325,6 +347,58 @@ const ProviderDashboard: React.FC = () => {
                         >
                           Decline
                         </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </Card>
+
+            <Card className="mt-6">
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">
+                Active Jobs ({activeBookings.length})
+              </h2>
+
+              {activeBookings.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  <FaClock className="mx-auto text-4xl mb-2 text-gray-300" />
+                  <p>No active jobs right now.</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {activeBookings.map((booking) => (
+                    <div key={booking.id} className="border border-green-200 rounded-lg p-4 bg-green-50">
+                      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-3">
+                        <div>
+                          <p className="text-sm text-green-700 font-semibold">Accepted</p>
+                          <h3 className="text-lg font-semibold text-gray-900">{booking.customer.name}</h3>
+                          <p className="text-sm text-gray-600">{booking.service.name}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-xs text-gray-500">Scheduled</p>
+                          <p className="font-semibold text-gray-900">
+                            {format(new Date(booking.bookingDate), 'MMM d, yyyy')} · {booking.startTime} - {booking.endTime}
+                          </p>
+                        </div>
+                      </div>
+
+                      <p className="text-sm text-gray-600">
+                        {booking.address}, {booking.city}, {booking.state}
+                      </p>
+
+                      <div className="mt-4 flex flex-col md:flex-row gap-3">
+                        <button
+                          onClick={() => handleMarkComplete(booking.id)}
+                          className="flex-1 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                        >
+                          Mark as Complete
+                        </button>
+                        <Link
+                          to={`/provider/messages?bookingId=${booking.id}`}
+                          className="flex-1 border border-blue-600 text-blue-600 py-2 rounded-lg hover:bg-blue-50 transition-colors text-center font-medium"
+                        >
+                          Open Chat
+                        </Link>
                       </div>
                     </div>
                   ))}

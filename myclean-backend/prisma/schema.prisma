@@ -27,6 +27,8 @@ model User {
   sentMessages      Message[]          @relation("SentMessages")
   receivedMessages  Message[]          @relation("ReceivedMessages")
   notifications     Notification[]
+  cleanerRatingsReceived CleanerRating[] @relation("CleanerRatingsProvider")
+  cleanerRatingsGiven CleanerRating[]    @relation("CleanerRatingsCustomer")
 }
 
 // Provider-specific information
@@ -117,7 +119,7 @@ model Booking {
   state             String
   zipCode           String
   specialInstructions String?
-  status            String           @default("PENDING") // PENDING, ACCEPTED, DECLINED, COMPLETED, CANCELLED
+  status            String           @default("PENDING") // PENDING, ACCEPTED, DECLINED, COMPLETED, RATED, CANCELLED
   totalPrice        Int              // in cents
   paymentStatus     String           @default("PENDING") // PENDING, PAID, REFUNDED
   createdAt         DateTime         @default(now())
@@ -128,6 +130,7 @@ model Booking {
   provider          User             @relation("ProviderBookings", fields: [providerId], references: [id])
   service           ProviderService  @relation(fields: [serviceId], references: [id])
   review            Review?
+  cleanerRating     CleanerRating?
   messages          Message[]
 }
 
@@ -176,4 +179,18 @@ model Message {
   booking    Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
   sender     User     @relation("SentMessages", fields: [senderId], references: [id])
   receiver   User     @relation("ReceivedMessages", fields: [receiverId], references: [id])
+}
+
+model CleanerRating {
+  id          Int      @id @default(autoincrement())
+  bookingId   Int      @unique
+  cleanerId   Int
+  customerId  Int
+  rating      Int
+  comment     String?
+  createdAt   DateTime @default(now())
+
+  booking     Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  cleaner     User     @relation("CleanerRatingsProvider", fields: [cleanerId], references: [id], onDelete: Cascade)
+  customer    User     @relation("CleanerRatingsCustomer", fields: [customerId], references: [id], onDelete: Cascade)
 }
