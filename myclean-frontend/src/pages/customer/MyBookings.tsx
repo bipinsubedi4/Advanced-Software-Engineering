@@ -206,15 +206,6 @@ const MyBookings: React.FC = () => {
     fetchBookings();
   }, [user]);
 
-  useEffect(() => {
-    const state = location.state as { highlightMessages?: boolean } | null;
-    if (state?.highlightMessages && bookings.length > 0) {
-      const bookingToOpen = bookings[0];
-      handleMessageProvider(bookingToOpen);
-      navigate(location.pathname, { replace: true, state: {} });
-    }
-  }, [bookings, handleMessageProvider, location, navigate]);
-
   const filteredBookings = useMemo(() => {
     if (filter === 'ALL') return bookings;
     return bookings.filter((booking) => booking.status === filter);
@@ -309,6 +300,15 @@ const MyBookings: React.FC = () => {
     setShowMessageModal(true);
     void loadMessages(booking);
   }, [loadMessages]);
+
+  useEffect(() => {
+    const state = location.state as { highlightMessages?: boolean } | null;
+    if (state?.highlightMessages && bookings.length > 0) {
+      const bookingToOpen = bookings[0];
+      handleMessageProvider(bookingToOpen);
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [bookings, handleMessageProvider, location, navigate]);
 
   const submitMessage = async (e: React.FormEvent) => {
     e.preventDefault();
