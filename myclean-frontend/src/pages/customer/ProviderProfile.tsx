@@ -1,5 +1,5 @@
 // src/pages/customer/ProviderProfile.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { FaStar, FaMapMarkerAlt, FaDollarSign, FaCheckCircle, FaClock, FaCalendar, FaCar, FaTools, FaShieldAlt } from 'react-icons/fa';
 import Modal from '../../components/Modal';
@@ -76,6 +76,7 @@ const ProviderProfile: React.FC = () => {
   const [submittingBooking, setSubmittingBooking] = useState(false);
   const [pageMessage, setPageMessage] = useState<{ type: 'success' | 'error' | 'info'; text: string } | null>(null);
   const [bookingMessage, setBookingMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const servicesSectionRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (!pageMessage) return;
@@ -83,16 +84,19 @@ const ProviderProfile: React.FC = () => {
     return () => clearTimeout(timer);
   }, [pageMessage]);
 
-  // Auto-open booking modal if navigated from "Book now" button
+  // Highlight services section if navigated from "Book now" button on search page
   useEffect(() => {
-    const state = location.state as { openBooking?: boolean } | null;
-    if (state?.openBooking && provider && provider.services.length > 0 && !showBookingModal) {
-      setSelectedService(provider.services[0]);
-      setShowBookingModal(true);
-      // Clear the state to prevent reopening on refresh
+    const state = location.state as { highlightServices?: boolean } | null;
+    if (state?.highlightServices && provider) {
+      setSelectedTab('services');
+      // Scroll into view after tab change renders
+      setTimeout(() => {
+        servicesSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 100);
+      // Clear state to avoid repeated scrolling when navigating back
       navigate(location.pathname, { replace: true, state: {} });
     }
-  }, [provider, location.state, location.pathname, navigate, showBookingModal]);
+  }, [provider, location, navigate]);
 
   useEffect(() => {
     async function load() {
@@ -367,7 +371,7 @@ const ProviderProfile: React.FC = () => {
 
           <div className="p-6">
             {selectedTab === 'services' && (
-              <div className="space-y-4">
+              <div ref={servicesSectionRef} className="space-y-4">
                 {provider.services.map(service => (
                   <div key={service.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
                     <div className="flex justify-between items-start">
