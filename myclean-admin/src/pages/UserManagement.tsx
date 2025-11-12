@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   fetchAdminBookings,
   fetchAdminReviews,
@@ -10,7 +10,9 @@ import {
   type AdminReview,
   type AdminUser,
 } from "../api/admin";
+import DataTable, { type Column } from "../components/DataTable";
 import StatusBadge from "../components/StatusBadge";
+import StatsGrid from "../components/StatsGrid";
 import { formatCurrency, formatDate, formatDateTime } from "../utils/format";
 import "./Page.css";
 
@@ -21,7 +23,7 @@ const UserManagement = () => {
   const [reviews, setReviews] = useState<AdminReview[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [processing, setProcessing] = useState<number | null>(null);
+  const [processingId, setProcessingId] = useState<number | null>(null);
 
   const loadData = async () => {
     try {
@@ -48,17 +50,180 @@ const UserManagement = () => {
   }, []);
 
   const handleSuspendToggle = async (user: AdminUser) => {
-    setProcessing(user.id);
+    setProcessingId(user.id);
     try {
       const updated = await toggleUserSuspend(user.id);
-      setUsers((prev) => prev.map((u) => (u.id === updated.id ? updated : u)));
+      setUsers((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Failed to update user.";
-      setError(msg);
+      setError(err instanceof Error ? err.message : "Failed to update user." );
     } finally {
-      setProcessing(null);
+      setProcessingId(null);
     }
   };
+
+  const stats = [
+    { label: "Users", value: users.length.toLocaleString(), helper: "All roles" },
+    { label: "Cleaner profiles", value: profiles.length.toLocaleString(), helper: "Active + draft" },
+    { label: "Bookings", value: bookings.length.toLocaleString(), helper: "Recent records" },
+    { label: "Reviews", value: reviews.length.toLocaleString(), helper: "Latest submissions" },
+  ];
+
+  const userColumns = useMemo<Column<AdminUser>[]>(
+    () => [
+      {
+        header: "User",
+        render: (user) => (
+          <div>
+            <p className="table-primary">{user.name ?? "—"}</p>
+            <p className="table-secondary">{user.email}</p>
+          </div>
+        ),
+      },
+      {
+        header: "Role",
+        render: (user) => <StatusBadge label={user.role} />,
+      },
+      {
+        header: "Status",
+        render: (user) => <StatusBadge label={user.isSuspended ? "suspended" : "active"} />,
+      },
+      {
+        header: "Joined",
+        render: (user) => formatDate(user.createdAt),
+      },
+      {
+        header: "Actions",
+        render: (user) => (
+          <button
+            className={user.isSuspended ? "button button--success" : "button button--danger"}
+            disabled={processingId === user.id}
+            onClick={() => handleSuspendToggle(user)}
+          >
+            {user.isSuspended ? "Unsuspend" : "Suspend"}
+          </button>
+        ),
+      },
+    ],
+    [processingId]
+  );
+
+  const profileColumns = useMemo<Column<AdminProviderProfile>[]>(
+    () => [
+      {
+        header: "Cleaner",
+        render: (profile) => (
+          <div>
+            <p className="table-primary">{profile.user.name ?? "—"}</p>
+            <p className="table-secondary">{profile.user.email}</p>
+          </div>
+        ),
+      },
+      {
+        header: "Contact",
+        render: (profile) => profile.user.phone ?? "—",
+      },
+      {
+        header: "Location",
+        render: (profile) => (profile.city ? `${profile.city}, ${profile.state ?? ""}` : "Not set"),
+      },
+      {
+        header: "Services",
+        render: (profile) =>
+          profile.services.length === 0 ? (
+            <span className="table-secondary">No services</span>
+          ) : (
+            <div className="flex flex-wrap gap-1">
+              {profile.services.map((service) => (
+                <StatusBadge key={service.id} label={`${service.status} • ${service.serviceName}`} />
+              ))}
+            </div>
+          ),
+      },
+    ],
+    []
+  );
+
+  const bookingColumns = useMemo<Column<AdminBooking>[]>(
+    () => [
+      {
+        header: "Booking",
+        render: (booking) => (
+          <div>
+            <p className="table-primary">#{booking.id}</p>
+            <StatusBadge label={booking.status} />
+          </div>
+        ),
+      },
+      {
+        header: "Service",
+        render: (booking) => (
+          <div>
+            <p className="table-primary">{booking.service.serviceName}</p>
+            <StatusBadge label={booking.service.status} />
+          </div>
+        ),
+      },
+      {
+        header: "Customer",
+        render: (booking) => (
+          <div>
+            <p className="table-primary">{booking.customer.name ?? "—"}</p>
+            <p className="table-secondary">{booking.customer.email}</p>
+          </div>
+        ),
+      },
+      {
+        header: "Cleaner",
+        render: (booking) => (
+          <div>
+            <p className="table-primary">{booking.provider.name ?? "—"}</p>
+            <p className="table-secondary">{booking.provider.email}</p>
+          </div>
+        ),
+      },
+      {
+        header: "Total",
+        render: (booking) => (
+          <div>
+            <p className="table-primary">{formatCurrency(booking.totalPrice)}</p>
+            <p className="table-secondary">{booking.paymentStatus}</p>
+          </div>
+        ),
+      },
+      {
+        header: "Created",
+        render: (booking) => formatDateTime(booking.createdAt),
+      },
+    ],
+    []
+  );
+
+  const reviewColumns = useMemo<Column<AdminReview>[]>(
+    () => [
+      {
+        header: "Rating",
+        render: (review) => (
+          <div>
+            <p className="table-primary">{review.rating} ★</p>
+            <p className="table-secondary">{review.customer.name ?? review.customer.email}</p>
+          </div>
+        ),
+      },
+      {
+        header: "Comment",
+        render: (review) => review.comment ?? "—",
+      },
+      {
+        header: "Service",
+        render: (review) => review.booking.service?.serviceName ?? "—",
+      },
+      {
+        header: "Submitted",
+        render: (review) => formatDate(review.createdAt),
+      },
+    ],
+    []
+  );
 
   if (loading) {
     return (
@@ -79,211 +244,21 @@ const UserManagement = () => {
 
   return (
     <div className="page">
-      <section className="data-card">
-        <header className="data-card__header">
-          <p className="data-card__title">Users</p>
-          <p className="data-card__count">{users.length} accounts</p>
-        </header>
-        <div className="data-table__wrapper">
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>User</th>
-                <th>Role</th>
-                <th>Status</th>
-                <th>Joined</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {users.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="data-table__empty">
-                    No users found.
-                  </td>
-                </tr>
-              ) : (
-                users.map((user) => (
-                  <tr key={user.id}>
-                    <td>
-                      <p className="table-primary">{user.name ?? "—"}</p>
-                      <p className="table-secondary">{user.email}</p>
-                    </td>
-                    <td>
-                      <StatusBadge label={user.role} />
-                    </td>
-                    <td>
-                      <StatusBadge label={user.isSuspended ? "suspended" : "active"} />
-                    </td>
-                    <td>{formatDate(user.createdAt)}</td>
-                    <td>
-                      <button
-                        className={user.isSuspended ? "button button--success" : "button button--danger"}
-                        disabled={processing === user.id}
-                        onClick={() => handleSuspendToggle(user)}
-                      >
-                        {user.isSuspended ? "Unsuspend" : "Suspend"}
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      <section className="data-card">
-        <header className="data-card__header">
-          <p className="data-card__title">Cleaner profiles</p>
-          <p className="data-card__count">{profiles.length} profiles</p>
-        </header>
-        <div className="data-table__wrapper">
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Cleaner</th>
-                <th>Contact</th>
-                <th>Location</th>
-                <th>Services</th>
-              </tr>
-            </thead>
-            <tbody>
-              {profiles.length === 0 ? (
-                <tr>
-                  <td colSpan={4} className="data-table__empty">
-                    No profiles found.
-                  </td>
-                </tr>
-              ) : (
-                profiles.map((profile) => (
-                  <tr key={profile.id}>
-                    <td>
-                      <p className="table-primary">{profile.user.name ?? "—"}</p>
-                      <p className="table-secondary">Profile #{profile.id}</p>
-                    </td>
-                    <td>
-                      <p className="table-secondary">{profile.user.email}</p>
-                      {profile.user.phone && <p className="table-secondary">{profile.user.phone}</p>}
-                    </td>
-                    <td>
-                      {profile.city ? `${profile.city}, ${profile.state ?? ""}` : "Not set"}
-                      <p className="table-secondary">Radius: {profile.serviceRadius ?? 0} mi</p>
-                    </td>
-                    <td>
-                      {profile.services.length === 0 ? (
-                        <span className="table-secondary">No services</span>
-                      ) : (
-                        <div className="flex flex-wrap gap-2">
-                          {profile.services.map((service) => (
-                            <StatusBadge key={service.id} label={`${service.status} • ${service.serviceName}`} />
-                          ))}
-                        </div>
-                      )}
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      <section className="data-card">
-        <header className="data-card__header">
-          <p className="data-card__title">Recent bookings</p>
-          <p className="data-card__count">{bookings.length} records</p>
-        </header>
-        <div className="data-table__wrapper">
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Booking</th>
-                <th>Service</th>
-                <th>Customer</th>
-                <th>Cleaner</th>
-                <th>Total</th>
-                <th>Created</th>
-              </tr>
-            </thead>
-            <tbody>
-              {bookings.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="data-table__empty">
-                    No bookings available.
-                  </td>
-                </tr>
-              ) : (
-                bookings.map((booking) => (
-                  <tr key={booking.id}>
-                    <td>
-                      <p className="table-primary">#{booking.id}</p>
-                      <StatusBadge label={booking.status} />
-                    </td>
-                    <td>
-                      <p className="table-primary">{booking.service.serviceName}</p>
-                      <StatusBadge label={booking.service.status} />
-                    </td>
-                    <td>
-                      <p className="table-primary">{booking.customer.name ?? "—"}</p>
-                      <p className="table-secondary">{booking.customer.email}</p>
-                    </td>
-                    <td>
-                      <p className="table-primary">{booking.provider.name ?? "—"}</p>
-                      <p className="table-secondary">{booking.provider.email}</p>
-                    </td>
-                    <td>
-                      <p className="table-primary">{formatCurrency(booking.totalPrice)}</p>
-                      <p className="table-secondary">{booking.paymentStatus}</p>
-                    </td>
-                    <td>{formatDateTime(booking.createdAt)}</td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      <section className="data-card">
-        <header className="data-card__header">
-          <p className="data-card__title">Reviews</p>
-          <p className="data-card__count">{reviews.length} submissions</p>
-        </header>
-        <div className="data-table__wrapper">
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Rating</th>
-                <th>Comment</th>
-                <th>Service</th>
-                <th>Submitted</th>
-              </tr>
-            </thead>
-            <tbody>
-              {reviews.length === 0 ? (
-                <tr>
-                  <td colSpan={4} className="data-table__empty">
-                    No reviews yet.
-                  </td>
-                </tr>
-              ) : (
-                reviews.map((review) => (
-                  <tr key={review.id}>
-                    <td>
-                      <p className="table-primary">{review.rating} ★</p>
-                      <p className="table-secondary">{review.customer.name ?? review.customer.email}</p>
-                    </td>
-                    <td>{review.comment ?? "—"}</td>
-                    <td>{review.booking.service?.serviceName ?? "—"}</td>
-                    <td>{formatDate(review.createdAt)}</td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </section>
+      <StatsGrid stats={stats.map((stat) => ({ label: stat.label, value: stat.value, helper: stat.helper }))} />
+      <DataTable title="Users" columns={userColumns} data={users} emptyMessage="No users found." />
+      <DataTable
+        title="Cleaner profiles"
+        columns={profileColumns}
+        data={profiles}
+        emptyMessage="No cleaner profiles yet."
+      />
+      <DataTable
+        title="Recent bookings"
+        columns={bookingColumns}
+        data={bookings}
+        emptyMessage="No bookings available."
+      />
+      <DataTable title="Latest reviews" columns={reviewColumns} data={reviews} emptyMessage="No reviews yet." />
     </div>
   );
 };

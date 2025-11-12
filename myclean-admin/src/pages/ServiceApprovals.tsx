@@ -1,19 +1,15 @@
-import { useEffect, useState } from "react";
-import {
-  approveService,
-  fetchServices,
-  rejectService,
-  type ServiceRecord,
-} from "../api/admin";
+import { useEffect, useMemo, useState } from "react";
+import { approveService, fetchServices, rejectService, type ServiceRecord } from "../api/admin";
 import StatusBadge from "../components/StatusBadge";
+import DataTable, { type Column } from "../components/DataTable";
 import { formatCurrency, formatDateTime } from "../utils/format";
 import "./Page.css";
 
 const filters = [
-  { label: "All", value: "ALL" },
   { label: "Pending", value: "PENDING" },
   { label: "Approved", value: "APPROVED" },
   { label: "Rejected", value: "REJECTED" },
+  { label: "All", value: "ALL" },
 ] as const;
 
 type FilterValue = (typeof filters)[number]["value"];
@@ -59,6 +55,79 @@ const ServiceApprovals = () => {
     }
   };
 
+  const columns = useMemo<Column<ServiceRecord>[]>(
+    () => [
+      {
+        header: "Service",
+        render: (service) => (
+          <div>
+            <p className="table-primary">{service.serviceName}</p>
+            {service.description && <p className="table-secondary">{service.description}</p>}
+          </div>
+        ),
+      },
+      {
+        header: "Cleaner",
+        render: (service) => (
+          <div>
+            <p className="table-primary">{service.provider.name}</p>
+            <p className="table-secondary">{service.provider.email}</p>
+          </div>
+        ),
+      },
+      {
+        header: "Pricing",
+        render: (service) => (
+          <div>
+            <p className="table-primary">{formatCurrency(service.pricePerHour)}</p>
+            <p className="table-secondary">{service.durationMin} min</p>
+          </div>
+        ),
+      },
+      {
+        header: "Status",
+        render: (service) => (
+          <div>
+            <StatusBadge label={service.status} />
+            {service.rejectionReason && service.status === "REJECTED" && (
+              <p className="table-secondary">Reason: {service.rejectionReason}</p>
+            )}
+          </div>
+        ),
+      },
+      {
+        header: "Submitted",
+        render: (service) => formatDateTime(service.createdAt),
+      },
+      {
+        header: "Actions",
+        minWidth: "200px",
+        render: (service) =>
+          service.status === "PENDING" ? (
+            <div className="button-group">
+              <button
+                className="button button--success"
+                disabled={actionId === service.id}
+                onClick={() => handleDecision(service.id, "approve")}
+              >
+                Approve
+              </button>
+              <button
+                className="button button--danger"
+                disabled={actionId === service.id}
+                onClick={() => handleDecision(service.id, "reject")}
+              >
+                Reject
+              </button>
+            </div>
+          ) : (
+            <span className="text-sm text-gray-500">No action required</span>
+          ),
+      },
+    ],
+    [actionId]
+  );
+
   if (loading) {
     return (
       <div className="page-loading">
@@ -78,94 +147,18 @@ const ServiceApprovals = () => {
 
   return (
     <div className="page">
-      <section className="data-card">
-        <header className="data-card__header">
-          <div>
-            <p className="data-card__title">Cleaning services</p>
-            <p className="data-card__count">{services.length} services</p>
-          </div>
-          <div className="button-group">
-            {filters.map((item) => (
-              <button
-                key={item.value}
-                className={`button ${filter === item.value ? "button--ghost" : ""}`}
-                onClick={() => setFilter(item.value)}
-              >
-                {item.label}
-              </button>
-            ))}
-          </div>
-        </header>
-        <div className="data-table__wrapper">
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Service</th>
-                <th>Cleaner</th>
-                <th>Pricing</th>
-                <th>Status</th>
-                <th>Submitted</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {services.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="data-table__empty">
-                    No services found.
-                  </td>
-                </tr>
-              ) : (
-                services.map((service) => (
-                  <tr key={service.id}>
-                    <td>
-                      <p className="table-primary">{service.serviceName}</p>
-                      {service.description && <p className="table-secondary">{service.description}</p>}
-                    </td>
-                    <td>
-                      <p className="table-primary">{service.provider.name}</p>
-                      <p className="table-secondary">{service.provider.email}</p>
-                    </td>
-                    <td>
-                      <p className="table-primary">{formatCurrency(service.pricePerHour)}</p>
-                      <p className="table-secondary">{service.durationMin} min</p>
-                    </td>
-                    <td>
-                      <StatusBadge label={service.status} />
-                      {service.rejectionReason && service.status === "REJECTED" && (
-                        <p className="table-secondary">Reason: {service.rejectionReason}</p>
-                      )}
-                    </td>
-                    <td>{formatDateTime(service.createdAt)}</td>
-                    <td>
-                      {service.status === "PENDING" ? (
-                        <div className="button-group">
-                          <button
-                            className="button button--success"
-                            disabled={actionId === service.id}
-                            onClick={() => handleDecision(service.id, "approve")}
-                          >
-                            Approve
-                          </button>
-                          <button
-                            className="button button--danger"
-                            disabled={actionId === service.id}
-                            onClick={() => handleDecision(service.id, "reject")}
-                          >
-                            Reject
-                          </button>
-                        </div>
-                      ) : (
-                        <span className="text-sm text-gray-500">No action required</span>
-                      )}
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </section>
+      <div className="button-group mb-4">
+        {filters.map((item) => (
+          <button
+            key={item.value}
+            className={`button ${filter === item.value ? "button--ghost" : ""}`}
+            onClick={() => setFilter(item.value)}
+          >
+            {item.label}
+          </button>
+        ))}
+      </div>
+      <DataTable title="Cleaning services" columns={columns} data={services} emptyMessage="No services found." />
     </div>
   );
 };

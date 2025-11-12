@@ -33,6 +33,7 @@
 .data-table {
   width: 100%;
   border-collapse: collapse;
+  min-width: 640px;
 }
 
 .data-table th,
@@ -40,6 +41,7 @@
   padding: 0.9rem 1.2rem;
   border-bottom: 1px solid var(--gray-100);
   text-align: left;
+  vertical-align: top;
 }
 
 .data-table th {
@@ -52,6 +54,14 @@
 .data-table td {
   font-size: 0.95rem;
   color: var(--gray-700);
+}
+
+.data-table tbody tr:nth-child(odd) {
+  background: var(--gray-50);
+}
+
+.data-table tbody tr:hover {
+  background: var(--brand-25);
 }
 
 .data-table tbody tr:last-child td {
