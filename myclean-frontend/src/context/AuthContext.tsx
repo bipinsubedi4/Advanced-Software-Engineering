@@ -12,12 +12,17 @@ interface User {
   role: Role;
 }
 
+interface RegistrationResult {
+  pendingApproval?: boolean;
+  message?: string;
+}
+
 interface AuthContextType {
   user: User | null;
   token: string | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (name: string, email: string, password: string, role: Role) => Promise<void>;
+  register: (name: string, email: string, password: string, role: Role) => Promise<RegistrationResult>;
   logout: () => void;
   // handy helpers
   isProvider: boolean;
@@ -98,6 +103,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Backend must return { token, user } OR we follow up with login.
       const res = await api.post('/api/auth/register', { name, email, password, role });
 
+      if (res.data?.pendingApproval) {
+        return {
+          pendingApproval: true,
+          message:
+            res.data?.message ??
+            'Your provider application was received. An admin will let you know when you can log in.',
+        };
+      }
+
       if (res.data?.token && res.data?.user) {
         // If your backend returns token + user on register:
         const { token: newToken, user: newUser } = res.data as { token: string; user: User };
@@ -105,10 +119,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(newUser);
         localStorage.setItem('token', newToken);
         localStorage.setItem('user', JSON.stringify(newUser));
-      } else {
-        // If it doesn't, fallback to login:
-        await login(email, password);
+        return {};
       }
+
+      // Fallback: attempt to login for flows that still expect it
+      await login(email, password);
+      return {};
     } catch (e) {
       throw normalizeError(e);
     }

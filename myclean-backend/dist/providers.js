@@ -92,7 +92,7 @@ router.get("/:id", async (req, res) => {
     }
 });
 /* ---------- PRIVATE: get my provider profile (for edit screens) ---------- */
-router.get("/me/profile", middleware_1.authenticateToken, async (req, res) => {
+router.get("/me/profile", middleware_1.authenticateToken, middleware_1.requireVerifiedProvider, async (req, res) => {
     const userId = req.user?.sub;
     if (!userId)
         return res.status(401).json({ error: "Unauthorized" });
@@ -119,7 +119,7 @@ router.get("/me/profile", middleware_1.authenticateToken, async (req, res) => {
     res.json({ success: true, profile: withProfileCompletion(me) });
 });
 /* ---------- PRIVATE: upsert my provider profile ---------- */
-router.post("/me/profile", middleware_1.authenticateToken, async (req, res) => {
+router.post("/me/profile", middleware_1.authenticateToken, middleware_1.requireVerifiedProvider, async (req, res) => {
     try {
         const userId = req.user?.sub;
         if (!userId)
@@ -185,7 +185,7 @@ router.post("/me/profile", middleware_1.authenticateToken, async (req, res) => {
     }
 });
 /* ---------- PRIVATE: replace my services (bulk) ---------- */
-router.post("/me/services", middleware_1.authenticateToken, async (req, res) => {
+router.post("/me/services", middleware_1.authenticateToken, middleware_1.requireVerifiedProvider, async (req, res) => {
     try {
         const userId = req.user?.sub;
         if (!userId)
@@ -257,8 +257,8 @@ router.post("/profile", async (req, res) => {
                 hasEquipment: validatedData.professional.hasEquipment,
                 certifications: validatedData.professional.certifications || null,
                 isProfileComplete: true,
-                isActive: true, // Provider is active immediately
-                isVerified: true, // Auto-verify for demo (in production, admin would verify)
+                isActive: false,
+                isVerified: false,
             },
             update: {
                 bio: validatedData.basicInfo.bio,
@@ -273,7 +273,6 @@ router.post("/profile", async (req, res) => {
                 hasEquipment: validatedData.professional.hasEquipment,
                 certifications: validatedData.professional.certifications || null,
                 isProfileComplete: true,
-                isActive: true, // Ensure provider stays active on update
                 updatedAt: new Date(),
             },
         });

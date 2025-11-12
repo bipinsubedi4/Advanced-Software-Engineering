@@ -64,6 +64,12 @@ router.post("/register", async (req, res) => {
     catch (emailError) {
         console.error("Failed to queue welcome email", emailError);
     }
+    if (user.role === "PROVIDER") {
+        return res.status(201).json({
+            pendingApproval: true,
+            message: "Your provider application was received. An admin will approve your profile before you can log in.",
+        });
+    }
     const token = jsonwebtoken_1.default.sign({ sub: user.id, role: user.role }, JWT_SECRET, {
         expiresIn: "7d",
     });
@@ -92,6 +98,15 @@ router.post("/login", async (req, res) => {
     const ok = await bcryptjs_1.default.compare(password, user.passwordHash);
     if (!ok)
         return res.status(401).json({ error: "Invalid credentials" });
+    if (user.role === "PROVIDER") {
+        const providerProfile = await prisma_1.prisma.providerProfile.findUnique({
+            where: { userId: user.id },
+            select: { isVerified: true },
+        });
+        if (!providerProfile?.isVerified) {
+            return res.status(403).json({ error: "Your provider profile is awaiting admin approval." });
+        }
+    }
     const token = jsonwebtoken_1.default.sign({ sub: user.id, role: user.role }, JWT_SECRET, {
         expiresIn: "7d",
     });

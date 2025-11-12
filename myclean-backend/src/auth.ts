@@ -33,30 +33,30 @@ router.post("/register", async (req, res) => {
     data: { name, email, passwordHash, role },
   });
 
-if (user.role === "PROVIDER") {
-  await prisma.providerProfile.create({
-    data: {
-      userId: user.id,
-      bio: "",
-      yearsExperience: "0",
-      hasInsurance: false,
-      hasVehicle: false,
-      hasEquipment: false,
-      certifications: "",
-      address: "",
-      city: "",
-      state: "",
-      zipCode: "",
-      serviceRadius: 10,
-      isVerified: false,
-      isActive: true,
-      isProfileComplete: false,
-      averageRating: 0,
-      totalReviews: 0,
-      totalBookings: 0,
-    },
-  });
-}
+  if (user.role === "PROVIDER") {
+    await prisma.providerProfile.create({
+      data: {
+        userId: user.id,
+        bio: "",
+        yearsExperience: "0",
+        hasInsurance: false,
+        hasVehicle: false,
+        hasEquipment: false,
+        certifications: "",
+        address: "",
+        city: "",
+        state: "",
+        zipCode: "",
+        serviceRadius: 10,
+        isVerified: false,
+        isActive: true,
+        isProfileComplete: false,
+        averageRating: 0,
+        totalReviews: 0,
+        totalBookings: 0,
+      },
+    });
+  }
 
 
   // Issue token on successful registration
@@ -64,6 +64,13 @@ if (user.role === "PROVIDER") {
     await queueWelcomeEmail({ email: user.email, name: user.name, role: user.role });
   } catch (emailError) {
     console.error("Failed to queue welcome email", emailError);
+  }
+
+  if (user.role === "PROVIDER") {
+    return res.status(201).json({
+      pendingApproval: true,
+      message: "Your provider application was received. An admin will approve your profile before you can log in.",
+    });
   }
 
   const token = jwt.sign({ sub: user.id, role: user.role }, JWT_SECRET, {
@@ -98,6 +105,17 @@ router.post("/login", async (req, res) => {
 
   const ok = await bcrypt.compare(password, user.passwordHash);
   if (!ok) return res.status(401).json({ error: "Invalid credentials" });
+
+  if (user.role === "PROVIDER") {
+    const providerProfile = await prisma.providerProfile.findUnique({
+      where: { userId: user.id },
+      select: { isVerified: true },
+    });
+
+    if (!providerProfile?.isVerified) {
+      return res.status(403).json({ error: "Your provider profile is awaiting admin approval." });
+    }
+  }
 
   const token = jwt.sign({ sub: user.id, role: user.role }, JWT_SECRET, {
     expiresIn: "7d",
