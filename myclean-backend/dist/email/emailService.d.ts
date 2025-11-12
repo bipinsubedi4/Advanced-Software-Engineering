@@ -59,12 +59,12 @@ export type BookingWithRelations = Booking & {
 export declare const buildBookingEmailContext: (booking: BookingNotificationRecord) => BookingEmailContext;
 export declare const buildBookingEmailContextFromModel: (booking: BookingWithRelations) => BookingEmailContext;
 export declare const queueEmail: <TTemplate extends EmailTemplate>({ to, template, payload, sendAfter, maxAttempts, }: QueueEmailParams<TTemplate>) => Promise<{
-    to: string;
-    subject: string;
     id: number;
     status: import(".prisma/client").$Enums.EmailJobStatus;
     createdAt: Date;
     updatedAt: Date;
+    to: string;
+    subject: string;
     template: import(".prisma/client").$Enums.EmailTemplate;
     payload: Prisma.JsonValue;
     maxAttempts: number;

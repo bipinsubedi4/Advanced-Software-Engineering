@@ -25,6 +25,7 @@ const recurringJobProcessor_1 = require("./cron/recurringJobProcessor");
 const emailService_1 = require("./email/emailService");
 const middleware_1 = require("./middleware");
 const socket_1 = require("./socket");
+const admin_1 = __importDefault(require("./admin"));
 const app = (0, express_1.default)();
 const httpServer = (0, http_1.createServer)(app);
 // Initialize Socket.IO
@@ -75,6 +76,7 @@ app.use("/api/jobs", recurringJobs_1.default);
 app.use("/api/stripe", stripeRoutes_1.default);
 app.use("/api", verification_1.default);
 app.use("/api", availability_1.default);
+app.use("/api/admin", admin_1.default);
 // Example protected route
 app.get("/api/users", middleware_1.authenticateToken, async (req, res) => {
     const user = req.user; // safely cast when you need it

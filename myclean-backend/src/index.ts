@@ -20,6 +20,7 @@ import { startRecurringJobProcessor } from "./cron/recurringJobProcessor";
 import { startEmailQueueWorker } from "./email/emailService";
 import { authenticateToken, AuthRequest } from "./middleware";
 import { initializeSocket } from "./socket";
+import adminRouter from "./admin";
 
 const app = express();
 const httpServer = createServer(app);
@@ -101,6 +102,7 @@ app.use("/api/jobs", recurringJobsRouter);
 app.use("/api/stripe", stripeRouter);
 app.use("/api", verificationRouter);
 app.use("/api", availabilityRouter);
+app.use("/api/admin", adminRouter);
 
 // Example protected route
 app.get("/api/users", authenticateToken, async (req: Request, res: Response) => {
