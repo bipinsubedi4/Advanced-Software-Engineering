@@ -1,6 +1,6 @@
 // src/pages/customer/ProviderProfile.tsx
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { FaStar, FaMapMarkerAlt, FaDollarSign, FaCheckCircle, FaClock, FaCalendar, FaCar, FaTools, FaShieldAlt } from 'react-icons/fa';
 import Modal from '../../components/Modal';
 import { format } from 'date-fns';
@@ -55,6 +55,7 @@ type ProviderUI = {
 const ProviderProfile: React.FC = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
 
   const [provider, setProvider] = useState<ProviderUI | null>(null);
@@ -81,6 +82,17 @@ const ProviderProfile: React.FC = () => {
     const timer = setTimeout(() => setPageMessage(null), 4000);
     return () => clearTimeout(timer);
   }, [pageMessage]);
+
+  // Auto-open booking modal if navigated from "Book now" button
+  useEffect(() => {
+    const state = location.state as { openBooking?: boolean } | null;
+    if (state?.openBooking && provider && provider.services.length > 0 && !showBookingModal) {
+      setSelectedService(provider.services[0]);
+      setShowBookingModal(true);
+      // Clear the state to prevent reopening on refresh
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [provider, location.state, location.pathname, navigate, showBookingModal]);
 
   useEffect(() => {
     async function load() {

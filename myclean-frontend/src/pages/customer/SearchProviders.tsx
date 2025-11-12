@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import axios from "axios";
+import { useNavigate } from "react-router-dom";
 import { FaMapMarkerAlt, FaStar, FaShieldAlt } from "react-icons/fa";
 import Card from "../../components/Card";
 import FilterSidebar, { FilterState } from "../../components/search/FilterSidebar";
@@ -36,6 +37,7 @@ const INITIAL_FILTERS: FilterState = {
 };
 
 const SearchProviders: React.FC = () => {
+  const navigate = useNavigate();
   const [filters, setFilters] = useState<FilterState>(INITIAL_FILTERS);
   const [sortBy, setSortBy] = useState("rating_desc");
   const [cleaners, setCleaners] = useState<CleanerResult[]>([]);
@@ -226,16 +228,18 @@ const SearchProviders: React.FC = () => {
                           ))}
                         </div>
                       </div>
-                      <div className="flex flex-col justify-between">
-                        <a
-                          href={`/provider/${cleaner.id}`}
+                      <div className="flex flex-col justify-between gap-2">
+                        <button
+                          type="button"
+                          onClick={() => navigate(`/provider/${cleaner.id}`)}
                           className="inline-flex items-center justify-center px-4 py-2 rounded-xl bg-indigo-600 text-white font-semibold hover:bg-indigo-700 transition"
                         >
                           View profile
-                        </a>
+                        </button>
                         <button
                           type="button"
-                          className="mt-2 inline-flex items-center justify-center px-4 py-2 rounded-xl border border-gray-200 text-gray-700 hover:bg-gray-50"
+                          onClick={() => navigate(`/provider/${cleaner.id}`, { state: { openBooking: true } })}
+                          className="inline-flex items-center justify-center px-4 py-2 rounded-xl border-2 border-indigo-600 text-indigo-600 font-semibold hover:bg-indigo-50 transition"
                         >
                           Book now
                         </button>
