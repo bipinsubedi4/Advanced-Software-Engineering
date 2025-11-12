@@ -8,7 +8,8 @@ import {
   useMemo,
   useState,
 } from "react";
-import { apiClient, setAuthToken } from "../api/client";
+import { setAuthToken } from "../api/client";
+import { adminLogin } from "../api/admin";
 
 type AdminUser = {
   id: number;
@@ -63,15 +64,7 @@ export const AdminAuthProvider = ({ children }: { children: ReactNode }) => {
   const login = useCallback(async (email: string, password: string) => {
     setError(null);
     try {
-      const response = await apiClient.post("/api/auth/login", { email, password });
-      const { token: newToken, user: payloadUser } = response.data as {
-        token: string;
-        user: AdminUser;
-      };
-
-      if (payloadUser.role !== "ADMIN") {
-        throw new Error("This dashboard is restricted to admin accounts.");
-      }
+      const { token: newToken, user: payloadUser } = await adminLogin(email, password);
 
       setToken(newToken);
       setUser(payloadUser);

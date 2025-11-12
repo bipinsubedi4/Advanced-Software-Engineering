@@ -120,6 +120,23 @@
   border: 1px solid var(--brand-100);
 }
 
+.button--success {
+  background: rgba(22, 163, 74, 0.1);
+  color: var(--success-600);
+  border: 1px solid transparent;
+}
+
+.button--danger {
+  background: rgba(220, 38, 38, 0.08);
+  color: var(--danger-600);
+  border: 1px solid transparent;
+}
+
+.button-group {
+  display: flex;
+  gap: 0.5rem;
+}
+
 .content {
   padding: 2rem;
   flex: 1;

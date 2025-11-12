@@ -6,7 +6,7 @@ import { useAdminAuth } from "../context/AdminAuthContext";
 import { getApiBaseUrl } from "../api/client";
 import "./Login.css";
 
-const LoginPage = () => {
+const AdminLogin = () => {
   const { login, error, clearError } = useAdminAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -24,7 +24,7 @@ const LoginPage = () => {
       const redirectTo = (location.state as { from?: Location })?.from ?? { pathname: "/" };
       navigate(redirectTo, { replace: true });
     } catch {
-      // error handled via context
+      // errors handled centrally
     } finally {
       setLoading(false);
     }
@@ -37,7 +37,7 @@ const LoginPage = () => {
           <span className="login-card__logo">🧼</span>
           <div>
             <p className="login-card__title">MyClean Admin</p>
-            <p className="login-card__subtitle">Sign in to continue</p>
+            <p className="login-card__subtitle">Restricted Area</p>
           </div>
         </div>
         <div className="login-card__env">
@@ -75,4 +75,4 @@ const LoginPage = () => {
   );
 };
 
-export default LoginPage;
+export default AdminLogin;

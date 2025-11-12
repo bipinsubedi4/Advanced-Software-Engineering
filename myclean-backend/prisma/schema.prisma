@@ -57,6 +57,7 @@ model User {
   name              String
   passwordHash      String
   role              String             @default("CUSTOMER") // CUSTOMER | PROVIDER | ADMIN
+  isSuspended       Boolean            @default(false)
   phone             String?
   profileImage      String?
   createdAt         DateTime           @default(now())

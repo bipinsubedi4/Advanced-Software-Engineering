@@ -1,96 +1,61 @@
 import { apiClient } from "./client";
 
-export type BookingStatusCount = {
-  status: string;
-  count: number;
+export type AdminStats = {
+  users: number;
+  bookings: number;
+  revenue: number;
 };
 
-export type OverviewResponse = {
-  totalUsers: number;
-  totalCustomers: number;
-  totalProviders: number;
-  totalBookings: number;
-  activeBookings: number;
-  monthlyRevenue: number;
-  averageBookingValue: number;
-  bookingsByStatus: BookingStatusCount[];
-  recentProviders: Array<{
-    id: number;
-    name: string;
-    email: string;
-    city: string | null;
-    state: string | null;
-    isVerified: boolean;
-    createdAt: string;
-  }>;
-  recentCustomers: Array<{
-    id: number;
-    name: string | null;
-    email: string;
-    createdAt: string;
-  }>;
-};
-
-export type BookingSummary = {
+export type PendingProvider = {
   id: number;
-  status: string;
-  paymentStatus: string;
-  totalPrice: number;
+  userId: number;
+  name: string;
+  email: string;
   createdAt: string;
-  bookingDate: string;
-  serviceName: string;
-  customer: {
-    id: number;
-    name: string | null;
-    email: string;
-  };
-  provider: {
-    id: number;
-    name: string | null;
-    email: string;
-  };
+  city: string | null;
+  state: string | null;
+  isVerified: boolean;
+  verificationStatus: string;
 };
 
-export type UserRecord = {
+export type AdminUser = {
   id: number;
   name: string | null;
   email: string;
   role: string;
   createdAt: string;
+  isSuspended: boolean;
 };
 
-export type ProviderRecord = {
-  id: number;
-  userId: number;
-  name: string;
-  email: string;
-  city: string | null;
-  state: string | null;
-  serviceRadius: number;
-  isVerified: boolean;
-  isActive: boolean;
-  isProfileComplete: boolean;
-  createdAt: string;
-  averageRating: number;
-  totalBookings: number;
+export const adminLogin = async (email: string, password: string) => {
+  const { data } = await apiClient.post("/api/admin/login", { email, password });
+  return data as { token: string; user: { id: number; name: string | null; email: string; role: string } };
 };
 
-export const fetchOverview = async (): Promise<OverviewResponse> => {
-  const { data } = await apiClient.get<OverviewResponse>("/api/admin/overview");
+export const fetchStats = async (): Promise<AdminStats> => {
+  const { data } = await apiClient.get<AdminStats>("/api/admin/stats");
   return data;
 };
 
-export const fetchRecentBookings = async (): Promise<BookingSummary[]> => {
-  const { data } = await apiClient.get<{ bookings: BookingSummary[] }>("/api/admin/bookings/recent");
-  return data.bookings;
+export const fetchPendingProviders = async (): Promise<PendingProvider[]> => {
+  const { data } = await apiClient.get<{ providers: PendingProvider[] }>("/api/admin/providers/pending");
+  return data.providers;
 };
 
-export const fetchUsers = async (): Promise<UserRecord[]> => {
-  const { data } = await apiClient.get<{ users: UserRecord[] }>("/api/admin/users");
+export const approveProvider = async (id: number) => {
+  await apiClient.post(`/api/admin/providers/approve/${id}`);
+};
+
+export const rejectProvider = async (id: number) => {
+  await apiClient.post(`/api/admin/providers/reject/${id}`);
+};
+
+export const fetchAdminUsers = async (): Promise<AdminUser[]> => {
+  const { data } = await apiClient.get<{ users: AdminUser[] }>("/api/admin/users");
   return data.users;
 };
 
-export const fetchProviders = async (): Promise<ProviderRecord[]> => {
-  const { data } = await apiClient.get<{ providers: ProviderRecord[] }>("/api/admin/providers");
-  return data.providers;
+export const toggleUserSuspend = async (id: number) => {
+  const { data } = await apiClient.put<{ user: AdminUser }>(`/api/admin/users/${id}/suspend`);
+  return data.user;
 };
