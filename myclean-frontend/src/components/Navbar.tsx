@@ -99,6 +99,13 @@ const Navbar: React.FC = () => {
                     <Link to="/my-bookings" className="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium">
                       My Bookings
                     </Link>
+                    <Link
+                      to="/my-bookings"
+                      state={{ highlightMessages: true }}
+                      className="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium"
+                    >
+                      Messages
+                    </Link>
                   </>
                 )}
                 {user.role === 'PROVIDER' && (
@@ -243,6 +250,13 @@ const Navbar: React.FC = () => {
                     </Link>
                     <Link to="/my-bookings" className="block text-gray-700 hover:bg-blue-50 px-3 py-2 rounded-md text-base font-medium">
                       My Bookings
+                    </Link>
+                    <Link
+                      to="/my-bookings"
+                      state={{ highlightMessages: true }}
+                      className="block text-gray-700 hover:bg-blue-50 px-3 py-2 rounded-md text-base font-medium"
+                    >
+                      Messages
                     </Link>
                   </>
                 )}

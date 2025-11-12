@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { FaCalendar, FaClock, FaMapMarkerAlt, FaStar, FaComments, FaDollarSign } from 'react-icons/fa';
 import { format } from 'date-fns';
 import axios from 'axios';
@@ -206,6 +206,15 @@ const MyBookings: React.FC = () => {
     fetchBookings();
   }, [user]);
 
+  useEffect(() => {
+    const state = location.state as { highlightMessages?: boolean } | null;
+    if (state?.highlightMessages && bookings.length > 0) {
+      const bookingToOpen = bookings[0];
+      handleMessageProvider(bookingToOpen);
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [bookings, handleMessageProvider, location, navigate]);
+
   const filteredBookings = useMemo(() => {
     if (filter === 'ALL') return bookings;
     return bookings.filter((booking) => booking.status === filter);
@@ -271,7 +280,7 @@ const MyBookings: React.FC = () => {
     }
   };
 
-  const loadMessages = async (booking: Booking) => {
+  const loadMessages = useCallback(async (booking: Booking) => {
     if (!user) return;
     setMessagesLoading(true);
     setMessagesError(null);
@@ -281,8 +290,9 @@ const MyBookings: React.FC = () => {
       const messages: Message[] = response.data?.messages ?? [];
       setBookingMessages(messages);
 
-      await axios.patch(`/api/messages/booking/${booking.id}/read`, { userId: user.id }).catch((err) => {
-        console.error('Failed to mark messages as read', err);
+      // Mark messages as read
+      await axios.patch(`/api/messages/booking/${booking.id}/read`, {
+        userId: user.id,
       });
     } catch (err) {
       console.error('Failed to load booking messages', err);
@@ -291,14 +301,14 @@ const MyBookings: React.FC = () => {
     } finally {
       setMessagesLoading(false);
     }
-  };
+  }, [user]);
 
-  const handleMessageProvider = (booking: Booking) => {
+  const handleMessageProvider = useCallback((booking: Booking) => {
     setSelectedBooking(booking);
     setMessage('');
     setShowMessageModal(true);
     void loadMessages(booking);
-  };
+  }, [loadMessages]);
 
   const submitMessage = async (e: React.FormEvent) => {
     e.preventDefault();
