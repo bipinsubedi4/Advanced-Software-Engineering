@@ -366,10 +366,10 @@ router.get("/search", async (req, res) => {
     if (queryString) {
       const searchCondition: Prisma.ProviderProfileWhereInput = {
         OR: [
-          { user: { name: { contains: queryString } } },
-          { city: { contains: queryString } },
-          { state: { contains: queryString } },
-          { bio: { contains: queryString } },
+          { user: { name: { contains: queryString, mode: "insensitive" } } },
+          { city: { contains: queryString, mode: "insensitive" } },
+          { state: { contains: queryString, mode: "insensitive" } },
+          { bio: { contains: queryString, mode: "insensitive" } },
         ],
       };
       andConditions.push(searchCondition);
@@ -404,7 +404,7 @@ router.get("/search", async (req, res) => {
         andConditions.push({
           services: {
             some: {
-              serviceName: { equals: serviceName },
+              serviceName: { equals: serviceName, mode: "insensitive" },
             },
           },
         });
