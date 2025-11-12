@@ -78,81 +78,83 @@ adminRouter.get("/stats", async (_req, res) => {
         res.status(500).json({ error: "Failed to load stats" });
     }
 });
-adminRouter.get("/providers/pending", async (_req, res) => {
+adminRouter.get("/services", async (req, res) => {
     try {
-        const pendingProviders = await prisma_1.prisma.providerProfile.findMany({
-            where: { isVerified: false },
+        const requestedStatus = typeof req.query.status === "string" ? req.query.status.toUpperCase() : undefined;
+        const where = requestedStatus && ["PENDING", "APPROVED", "REJECTED"].includes(requestedStatus)
+            ? { status: requestedStatus }
+            : undefined;
+        const services = await prisma_1.prisma.providerService.findMany({
+            where,
             include: {
-                user: {
-                    select: {
-                        id: true,
-                        name: true,
-                        email: true,
-                        createdAt: true,
+                provider: {
+                    include: {
+                        user: { select: { id: true, name: true, email: true, createdAt: true } },
                     },
                 },
             },
-            orderBy: { createdAt: "asc" },
+            orderBy: { createdAt: "desc" },
         });
         res.json({
-            providers: pendingProviders.map((provider) => ({
-                id: provider.id,
-                userId: provider.userId,
-                name: provider.user?.name ?? "Unknown",
-                email: provider.user?.email ?? "",
-                createdAt: provider.createdAt,
-                city: provider.city,
-                state: provider.state,
-                isVerified: provider.isVerified,
-                verificationStatus: provider.verificationStatus,
+            services: services.map((service) => ({
+                id: service.id,
+                serviceName: service.serviceName,
+                description: service.description,
+                pricePerHour: service.pricePerHour,
+                durationMin: service.durationMin,
+                status: service.status,
+                rejectionReason: service.rejectionReason,
+                createdAt: service.createdAt,
+                updatedAt: service.updatedAt,
+                provider: {
+                    profileId: service.provider.id,
+                    userId: service.provider.userId,
+                    name: service.provider.user?.name ?? "Unknown",
+                    email: service.provider.user?.email ?? "",
+                    city: service.provider.city,
+                    state: service.provider.state,
+                },
             })),
         });
     }
     catch (error) {
-        console.error("Pending providers error:", error);
-        res.status(500).json({ error: "Failed to load providers" });
+        console.error("Admin services error:", error);
+        res.status(500).json({ error: "Failed to load services" });
     }
 });
-adminRouter.post("/providers/approve/:id", async (req, res) => {
+adminRouter.post("/services/:id/approve", async (req, res) => {
     try {
-        const providerId = Number(req.params.id);
-        if (Number.isNaN(providerId)) {
-            return res.status(400).json({ error: "Invalid provider id" });
+        const serviceId = Number(req.params.id);
+        if (Number.isNaN(serviceId)) {
+            return res.status(400).json({ error: "Invalid service id" });
         }
-        const updated = await prisma_1.prisma.providerProfile.update({
-            where: { id: providerId },
-            data: {
-                isVerified: true,
-                verificationStatus: "APPROVED",
-                isActive: true,
-            },
+        const updated = await prisma_1.prisma.providerService.update({
+            where: { id: serviceId },
+            data: { status: "APPROVED", rejectionReason: null, isActive: true },
         });
-        res.json({ provider: updated });
+        res.json({ service: updated });
     }
     catch (error) {
-        console.error("Approve provider error:", error);
-        res.status(500).json({ error: "Failed to approve provider" });
+        console.error("Approve service error:", error);
+        res.status(500).json({ error: "Failed to approve service" });
     }
 });
-adminRouter.post("/providers/reject/:id", async (req, res) => {
+adminRouter.post("/services/:id/reject", async (req, res) => {
     try {
-        const providerId = Number(req.params.id);
-        if (Number.isNaN(providerId)) {
-            return res.status(400).json({ error: "Invalid provider id" });
+        const serviceId = Number(req.params.id);
+        if (Number.isNaN(serviceId)) {
+            return res.status(400).json({ error: "Invalid service id" });
         }
-        const updated = await prisma_1.prisma.providerProfile.update({
-            where: { id: providerId },
-            data: {
-                isVerified: false,
-                isActive: false,
-                verificationStatus: "REJECTED",
-            },
+        const reason = typeof req.body?.reason === "string" ? req.body.reason : null;
+        const updated = await prisma_1.prisma.providerService.update({
+            where: { id: serviceId },
+            data: { status: "REJECTED", rejectionReason: reason, isActive: false },
         });
-        res.json({ provider: updated });
+        res.json({ service: updated });
     }
     catch (error) {
-        console.error("Reject provider error:", error);
-        res.status(500).json({ error: "Failed to reject provider" });
+        console.error("Reject service error:", error);
+        res.status(500).json({ error: "Failed to reject service" });
     }
 });
 adminRouter.get("/users", async (_req, res) => {
@@ -194,6 +196,63 @@ adminRouter.put("/users/:id/suspend", async (req, res) => {
     catch (error) {
         console.error("Suspend user error:", error);
         res.status(500).json({ error: "Failed to update user status" });
+    }
+});
+adminRouter.get("/provider-profiles", async (_req, res) => {
+    try {
+        const profiles = await prisma_1.prisma.providerProfile.findMany({
+            include: {
+                user: { select: { id: true, name: true, email: true, phone: true, createdAt: true } },
+                services: { select: { id: true, serviceName: true, status: true, isActive: true } },
+            },
+            orderBy: { createdAt: "desc" },
+            take: 200,
+        });
+        res.json({ profiles });
+    }
+    catch (error) {
+        console.error("Admin provider profiles error:", error);
+        res.status(500).json({ error: "Failed to load provider profiles" });
+    }
+});
+adminRouter.get("/bookings", async (_req, res) => {
+    try {
+        const bookings = await prisma_1.prisma.booking.findMany({
+            include: {
+                customer: { select: { id: true, name: true, email: true } },
+                provider: { select: { id: true, name: true, email: true } },
+                service: { select: { id: true, serviceName: true, status: true } },
+            },
+            orderBy: { createdAt: "desc" },
+            take: 200,
+        });
+        res.json({ bookings });
+    }
+    catch (error) {
+        console.error("Admin bookings error:", error);
+        res.status(500).json({ error: "Failed to load bookings" });
+    }
+});
+adminRouter.get("/reviews", async (_req, res) => {
+    try {
+        const reviews = await prisma_1.prisma.review.findMany({
+            include: {
+                booking: {
+                    select: {
+                        id: true,
+                        service: { select: { id: true, serviceName: true } },
+                    },
+                },
+                customer: { select: { id: true, name: true, email: true } },
+            },
+            orderBy: { createdAt: "desc" },
+            take: 200,
+        });
+        res.json({ reviews });
+    }
+    catch (error) {
+        console.error("Admin reviews error:", error);
+        res.status(500).json({ error: "Failed to load reviews" });
     }
 });
 exports.default = adminRouter;

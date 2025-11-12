@@ -187,6 +187,8 @@ router.post("/public/:bidId/accept", async (req, res) => {
                         description: bid.publicJob.description?.slice(0, 180) ?? "Automatically created from accepted marketplace job",
                         pricePerHour: Math.max(fallbackPrice * 100, 1000),
                         durationMin: 60,
+                        status: "APPROVED",
+                        rejectionReason: null,
                     },
                 });
                 selectedServiceId = autoService.id;

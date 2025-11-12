@@ -4,8 +4,8 @@ import "./AdminLayout.css";
 
 const navItems = [
   { to: "/", label: "Dashboard", icon: "📊" },
-  { to: "/providers", label: "Provider Approvals", icon: "🧽" },
-  { to: "/users", label: "User Management", icon: "👥" },
+  { to: "/services", label: "Service Approvals", icon: "🧼" },
+  { to: "/data", label: "Data Explorer", icon: "📚" },
 ];
 
 const AdminLayout = () => {

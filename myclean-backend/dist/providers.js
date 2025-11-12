@@ -92,7 +92,7 @@ router.get("/:id", async (req, res) => {
     }
 });
 /* ---------- PRIVATE: get my provider profile (for edit screens) ---------- */
-router.get("/me/profile", middleware_1.authenticateToken, middleware_1.requireVerifiedProvider, async (req, res) => {
+router.get("/me/profile", middleware_1.authenticateToken, async (req, res) => {
     const userId = req.user?.sub;
     if (!userId)
         return res.status(401).json({ error: "Unauthorized" });
@@ -107,7 +107,7 @@ router.get("/me/profile", middleware_1.authenticateToken, middleware_1.requireVe
     // if not found, create a basic one now (safety)
     if (!me) {
         const created = await prisma_1.prisma.providerProfile.create({
-            data: { userId, isActive: true, isVerified: false, isProfileComplete: false },
+            data: { userId, isActive: true, isVerified: true, isProfileComplete: false },
             include: {
                 user: { select: { id: true, name: true, profileImage: true } },
                 services: true,
@@ -119,7 +119,7 @@ router.get("/me/profile", middleware_1.authenticateToken, middleware_1.requireVe
     res.json({ success: true, profile: withProfileCompletion(me) });
 });
 /* ---------- PRIVATE: upsert my provider profile ---------- */
-router.post("/me/profile", middleware_1.authenticateToken, middleware_1.requireVerifiedProvider, async (req, res) => {
+router.post("/me/profile", middleware_1.authenticateToken, async (req, res) => {
     try {
         const userId = req.user?.sub;
         if (!userId)
@@ -185,7 +185,7 @@ router.post("/me/profile", middleware_1.authenticateToken, middleware_1.requireV
     }
 });
 /* ---------- PRIVATE: replace my services (bulk) ---------- */
-router.post("/me/services", middleware_1.authenticateToken, middleware_1.requireVerifiedProvider, async (req, res) => {
+router.post("/me/services", middleware_1.authenticateToken, async (req, res) => {
     try {
         const userId = req.user?.sub;
         if (!userId)
@@ -207,6 +207,8 @@ router.post("/me/services", middleware_1.authenticateToken, middleware_1.require
                     pricePerHour: Number(s.pricePerHour) || 0, // cents
                     durationMin: Number(s.durationMin) || 60,
                     isActive: true,
+                    status: "PENDING",
+                    rejectionReason: null,
                 })),
             });
         }
@@ -257,8 +259,8 @@ router.post("/profile", async (req, res) => {
                 hasEquipment: validatedData.professional.hasEquipment,
                 certifications: validatedData.professional.certifications || null,
                 isProfileComplete: true,
-                isActive: false,
-                isVerified: false,
+                isActive: true,
+                isVerified: true,
             },
             update: {
                 bio: validatedData.basicInfo.bio,
@@ -273,6 +275,7 @@ router.post("/profile", async (req, res) => {
                 hasEquipment: validatedData.professional.hasEquipment,
                 certifications: validatedData.professional.certifications || null,
                 isProfileComplete: true,
+                isActive: true,
                 updatedAt: new Date(),
             },
         });
@@ -293,6 +296,8 @@ router.post("/profile", async (req, res) => {
                     pricePerHour: Math.round(parseFloat(service.rate) * 100), // Convert to cents
                     durationMin: 60, // Default 1 hour minimum
                     isActive: true,
+                    status: "PENDING",
+                    rejectionReason: null,
                 })),
             });
         }

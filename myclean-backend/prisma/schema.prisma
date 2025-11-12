@@ -97,7 +97,7 @@ model ProviderProfile {
   latitude          Float?
   longitude         Float?
   serviceRadius     Int       @default(10)
-  isVerified        Boolean   @default(false)
+  isVerified        Boolean   @default(true)
   isActive          Boolean   @default(true)
   isProfileComplete Boolean   @default(false) @map("profileComplete")
   averageRating     Float     @default(0)
@@ -130,6 +130,8 @@ model ProviderService {
   pricePerHour    Int             // in cents
   durationMin     Int             // minimum duration in minutes
   isActive        Boolean         @default(true)
+  status          ServiceStatus   @default(PENDING)
+  rejectionReason String?
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
   
@@ -137,6 +139,8 @@ model ProviderService {
   provider        ProviderProfile @relation(fields: [providerId], references: [id], onDelete: Cascade)
   bookings        Booking[]
   recurringJobs   RecurringJob[]
+
+  @@index([status])
 }
 
 // Provider availability schedule
@@ -351,4 +355,9 @@ model EmailJob {
   sentAt       DateTime?
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
+}
+enum ServiceStatus {
+  PENDING
+  APPROVED
+  REJECTED
 }

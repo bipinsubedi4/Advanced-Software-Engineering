@@ -37,26 +37,3 @@ export function authenticateToken(
     return res.sendStatus(403);
   }
 }
-
-export const requireVerifiedProvider = async (req: Request, res: Response, next: NextFunction) => {
-  const authReq = req as AuthRequest;
-  if (!authReq.user || authReq.user.role !== "PROVIDER") {
-    return res.status(403).json({ error: "Provider access required" });
-  }
-
-  try {
-    const profile = await prisma.providerProfile.findUnique({
-      where: { userId: authReq.user.sub },
-      select: { isVerified: true },
-    });
-
-    if (!profile?.isVerified) {
-      return res.status(403).json({ error: "Your provider profile must be approved by an admin." });
-    }
-
-    next();
-  } catch (error) {
-    console.error("requireVerifiedProvider error:", error);
-    return res.status(500).json({ error: "Failed to verify provider status" });
-  }
-};

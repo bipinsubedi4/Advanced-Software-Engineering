@@ -1,6 +1,6 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 import Dashboard from "./pages/Dashboard";
-import ProviderApprovals from "./pages/ProviderApprovals";
+import ServiceApprovals from "./pages/ServiceApprovals";
 import UserManagement from "./pages/UserManagement";
 import AdminLogin from "./pages/AdminLogin";
 import AdminLayout from "./components/AdminLayout";
@@ -18,8 +18,8 @@ function App() {
         }
       >
         <Route path="/" element={<Dashboard />} />
-        <Route path="/providers" element={<ProviderApprovals />} />
-        <Route path="/users" element={<UserManagement />} />
+        <Route path="/services" element={<ServiceApprovals />} />
+        <Route path="/data" element={<UserManagement />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

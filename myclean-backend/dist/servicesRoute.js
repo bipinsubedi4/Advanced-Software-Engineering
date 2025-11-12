@@ -11,7 +11,7 @@ const router = (0, express_1.Router)();
 router.get("/", async (_req, res) => {
     try {
         const rows = await prisma_1.prisma.providerService.findMany({
-            where: { isActive: true },
+            where: { isActive: true, status: "APPROVED" },
             select: {
                 id: true,
                 serviceName: true,

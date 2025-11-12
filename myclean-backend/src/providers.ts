@@ -2,7 +2,7 @@
 import { Router, Request, Response } from "express";
 import { z } from "zod";
 import { prisma } from "./prisma";
-import { authenticateToken, AuthRequest, requireVerifiedProvider } from "./middleware";
+import { authenticateToken, AuthRequest } from "./middleware";
 
 const router = Router();
 
@@ -101,7 +101,7 @@ router.get("/:id", async (req: Request, res: Response) => {
 });
 
 /* ---------- PRIVATE: get my provider profile (for edit screens) ---------- */
-router.get("/me/profile", authenticateToken, requireVerifiedProvider, async (req: Request, res: Response) => {
+router.get("/me/profile", authenticateToken, async (req: Request, res: Response) => {
   const userId = (req as AuthRequest).user?.sub;
   if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
@@ -117,7 +117,7 @@ router.get("/me/profile", authenticateToken, requireVerifiedProvider, async (req
   // if not found, create a basic one now (safety)
   if (!me) {
     const created = await prisma.providerProfile.create({
-      data: { userId, isActive: true, isVerified: false, isProfileComplete: false },
+      data: { userId, isActive: true, isVerified: true, isProfileComplete: false },
       include: {
         user: { select: { id: true, name: true, profileImage: true } },
         services: true,
@@ -131,7 +131,7 @@ router.get("/me/profile", authenticateToken, requireVerifiedProvider, async (req
 });
 
 /* ---------- PRIVATE: upsert my provider profile ---------- */
-router.post("/me/profile", authenticateToken, requireVerifiedProvider, async (req: Request, res: Response) => {
+router.post("/me/profile", authenticateToken, async (req: Request, res: Response) => {
   try {
     const userId = (req as AuthRequest).user?.sub;
     if (!userId) return res.status(401).json({ error: "Unauthorized" });
@@ -212,7 +212,7 @@ router.post("/me/profile", authenticateToken, requireVerifiedProvider, async (re
 });
 
 /* ---------- PRIVATE: replace my services (bulk) ---------- */
-router.post("/me/services", authenticateToken, requireVerifiedProvider, async (req: Request, res: Response) => {
+router.post("/me/services", authenticateToken, async (req: Request, res: Response) => {
   try {
     const userId = (req as AuthRequest).user?.sub;
     if (!userId) return res.status(401).json({ error: "Unauthorized" });
@@ -236,6 +236,8 @@ router.post("/me/services", authenticateToken, requireVerifiedProvider, async (r
           pricePerHour: Number(s.pricePerHour) || 0, // cents
           durationMin: Number(s.durationMin) || 60,
           isActive: true,
+          status: "PENDING",
+          rejectionReason: null,
         })),
       });
     }
@@ -291,8 +293,8 @@ router.post("/profile", async (req, res) => {
         hasEquipment: validatedData.professional.hasEquipment,
         certifications: validatedData.professional.certifications || null,
         isProfileComplete: true,
-        isActive: false,
-        isVerified: false,
+        isActive: true,
+        isVerified: true,
       },
       update: {
         bio: validatedData.basicInfo.bio,
@@ -307,6 +309,7 @@ router.post("/profile", async (req, res) => {
         hasEquipment: validatedData.professional.hasEquipment,
         certifications: validatedData.professional.certifications || null,
         isProfileComplete: true,
+        isActive: true,
         updatedAt: new Date(),
       },
     });
@@ -332,6 +335,8 @@ router.post("/profile", async (req, res) => {
           pricePerHour: Math.round(parseFloat(service.rate) * 100), // Convert to cents
           durationMin: 60, // Default 1 hour minimum
           isActive: true,
+          status: "PENDING",
+          rejectionReason: null,
         })),
       });
     }

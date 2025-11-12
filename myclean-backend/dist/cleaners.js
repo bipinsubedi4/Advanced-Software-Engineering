@@ -68,7 +68,7 @@ const ensureProviderProfile = async (userId) => {
             data: {
                 userId,
                 isActive: true,
-                isVerified: false,
+                isVerified: true,
                 isProfileComplete: false,
             },
             include: profileInclude,
@@ -149,6 +149,8 @@ router.put("/me/profile", middleware_1.authenticateToken, async (req, res) => {
                             serviceName: service.name,
                             description: `${service.category} service`,
                             isActive: true,
+                            status: "PENDING",
+                            rejectionReason: null,
                         },
                     });
                 }
@@ -161,6 +163,8 @@ router.put("/me/profile", middleware_1.authenticateToken, async (req, res) => {
                             pricePerHour: 0,
                             durationMin: 60,
                             isActive: true,
+                            status: "PENDING",
+                            rejectionReason: null,
                         },
                     });
                 }

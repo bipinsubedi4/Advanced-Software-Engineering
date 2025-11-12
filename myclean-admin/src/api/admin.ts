@@ -6,16 +6,24 @@ export type AdminStats = {
   revenue: number;
 };
 
-export type PendingProvider = {
+export type ServiceRecord = {
   id: number;
-  userId: number;
-  name: string;
-  email: string;
+  serviceName: string;
+  description?: string | null;
+  pricePerHour: number;
+  durationMin: number;
+  status: "PENDING" | "APPROVED" | "REJECTED";
+  rejectionReason?: string | null;
   createdAt: string;
-  city: string | null;
-  state: string | null;
-  isVerified: boolean;
-  verificationStatus: string;
+  updatedAt: string;
+  provider: {
+    profileId: number;
+    userId: number;
+    name: string;
+    email: string;
+    city?: string | null;
+    state?: string | null;
+  };
 };
 
 export type AdminUser = {
@@ -25,6 +33,48 @@ export type AdminUser = {
   role: string;
   createdAt: string;
   isSuspended: boolean;
+};
+
+export type AdminProviderProfile = {
+  id: number;
+  userId: number;
+  city: string | null;
+  state: string | null;
+  serviceRadius: number | null;
+  createdAt: string;
+  user: {
+    id: number;
+    name: string | null;
+    email: string;
+    phone?: string | null;
+  };
+  services: Array<{
+    id: number;
+    serviceName: string;
+    status: string;
+    isActive: boolean;
+  }>;
+};
+
+export type AdminBooking = {
+  id: number;
+  status: string;
+  paymentStatus: string;
+  totalPrice: number;
+  createdAt: string;
+  bookingDate: string;
+  customer: { id: number; name: string | null; email: string };
+  provider: { id: number; name: string | null; email: string };
+  service: { id: number; serviceName: string; status: string };
+};
+
+export type AdminReview = {
+  id: number;
+  rating: number;
+  comment?: string | null;
+  createdAt: string;
+  booking: { id: number; service: { id: number; serviceName: string } | null };
+  customer: { id: number; name: string | null; email: string };
 };
 
 export const adminLogin = async (email: string, password: string) => {
@@ -37,17 +87,18 @@ export const fetchStats = async (): Promise<AdminStats> => {
   return data;
 };
 
-export const fetchPendingProviders = async (): Promise<PendingProvider[]> => {
-  const { data } = await apiClient.get<{ providers: PendingProvider[] }>("/api/admin/providers/pending");
-  return data.providers;
+export const fetchServices = async (status?: string): Promise<ServiceRecord[]> => {
+  const query = status ? `?status=${encodeURIComponent(status)}` : "";
+  const { data } = await apiClient.get<{ services: ServiceRecord[] }>(`/api/admin/services${query}`);
+  return data.services;
 };
 
-export const approveProvider = async (id: number) => {
-  await apiClient.post(`/api/admin/providers/approve/${id}`);
+export const approveService = async (id: number) => {
+  await apiClient.post(`/api/admin/services/${id}/approve`);
 };
 
-export const rejectProvider = async (id: number) => {
-  await apiClient.post(`/api/admin/providers/reject/${id}`);
+export const rejectService = async (id: number, reason?: string) => {
+  await apiClient.post(`/api/admin/services/${id}/reject`, { reason });
 };
 
 export const fetchAdminUsers = async (): Promise<AdminUser[]> => {
@@ -58,4 +109,19 @@ export const fetchAdminUsers = async (): Promise<AdminUser[]> => {
 export const toggleUserSuspend = async (id: number) => {
   const { data } = await apiClient.put<{ user: AdminUser }>(`/api/admin/users/${id}/suspend`);
   return data.user;
+};
+
+export const fetchProviderProfiles = async (): Promise<AdminProviderProfile[]> => {
+  const { data } = await apiClient.get<{ profiles: AdminProviderProfile[] }>("/api/admin/provider-profiles");
+  return data.profiles;
+};
+
+export const fetchAdminBookings = async (): Promise<AdminBooking[]> => {
+  const { data } = await apiClient.get<{ bookings: AdminBooking[] }>("/api/admin/bookings");
+  return data.bookings;
+};
+
+export const fetchAdminReviews = async (): Promise<AdminReview[]> => {
+  const { data } = await apiClient.get<{ reviews: AdminReview[] }>("/api/admin/reviews");
+  return data.reviews;
 };

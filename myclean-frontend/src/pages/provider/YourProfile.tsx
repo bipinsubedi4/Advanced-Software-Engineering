@@ -52,6 +52,8 @@ interface ProviderProfile {
     pricePerHour: number; // in cents
     durationMin: number;
     isActive: boolean;
+    status?: string;
+    rejectionReason?: string | null;
   }>;
   availability: Array<{
     id: number;
@@ -134,6 +136,20 @@ const YourProfile: React.FC = () => {
   const fullAddress = [profile.address, profile.city, profile.state, profile.zipCode]
     .filter(Boolean)
     .join(', ');
+
+  const serviceStatusClass = (status: string) => {
+    switch (status) {
+      case 'PENDING':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'REJECTED':
+        return 'bg-red-100 text-red-700';
+      default:
+        return 'bg-green-100 text-green-700';
+    }
+  };
+
+  const pendingServices = profile.services?.filter((service) => (service.status ?? 'APPROVED') === 'PENDING').length ?? 0;
+  const rejectedServices = profile.services?.filter((service) => (service.status ?? 'APPROVED') === 'REJECTED').length ?? 0;
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
@@ -288,31 +304,65 @@ const YourProfile: React.FC = () => {
                   <FaDollarSign className="mr-2 text-indigo-600" />
                   Services & Pricing
                 </h3>
+
+                {(pendingServices > 0 || rejectedServices > 0) && (
+                  <div className="mb-4 p-4 rounded-lg bg-yellow-50 border border-yellow-200 text-sm text-yellow-800">
+                    {pendingServices > 0 && (
+                      <p>
+                        {pendingServices} service{pendingServices > 1 ? 's are' : ' is'} awaiting admin approval before
+                        appearing to customers.
+                      </p>
+                    )}
+                    {rejectedServices > 0 && (
+                      <p className="mt-1">
+                        {rejectedServices} service{rejectedServices > 1 ? 's were' : ' was'} rejected and will remain
+                        hidden until updated.
+                      </p>
+                    )}
+                  </div>
+                )}
+
                 <div className="space-y-3">
-                  {profile.services
-                    .filter((service) => service.isActive)
-                    .map((service) => (
+                  {profile.services.map((service) => {
+                    const statusLabel = (service.status ?? 'APPROVED').toUpperCase();
+                    return (
                       <div
                         key={service.id}
-                        className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200"
+                        className="flex items-start justify-between p-4 bg-gray-50 rounded-lg border border-gray-200 space-x-4"
                       >
                         <div className="flex-1">
-                          <h4 className="font-semibold text-gray-900">{service.serviceName}</h4>
+                          <div className="flex items-center space-x-3">
+                            <h4 className="font-semibold text-gray-900">{service.serviceName}</h4>
+                            <span
+                              className={`px-2 py-1 rounded-full text-xs font-semibold ${serviceStatusClass(
+                                statusLabel,
+                              )}`}
+                            >
+                              {statusLabel.toLowerCase()}
+                            </span>
+                          </div>
                           {service.description && (
                             <p className="text-sm text-gray-600 mt-1">{service.description}</p>
                           )}
                           <p className="text-sm text-gray-500 mt-1">
                             Duration: {service.durationMin} minutes
                           </p>
+                          {statusLabel === 'REJECTED' && service.rejectionReason && (
+                            <p className="text-xs text-red-600 mt-1">Reason: {service.rejectionReason}</p>
+                          )}
                         </div>
                         <div className="text-right">
                           <p className="text-2xl font-bold text-indigo-600">
                             ${((service.pricePerHour || 0) / 100).toFixed(2)}
                           </p>
                           <p className="text-sm text-gray-500">per hour</p>
+                          {!service.isActive && (
+                            <p className="text-xs text-gray-500 mt-1">Inactive in marketplace</p>
+                          )}
                         </div>
                       </div>
-                    ))}
+                    );
+                  })}
                 </div>
               </div>
             )}

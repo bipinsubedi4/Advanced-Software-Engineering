@@ -8,7 +8,6 @@ const Register: React.FC = () => {
   const [password, setPassword] = useState('');
   const [role, setRole] = useState<'CUSTOMER' | 'PROVIDER'>('CUSTOMER');
   const [error, setError] = useState('');
-  const [info, setInfo] = useState('');
   const [loading, setLoading] = useState(false);
   const [justRegistered, setJustRegistered] = useState(false);
   const { register, user } = useAuth();
@@ -31,25 +30,13 @@ const Register: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    setInfo('');
     setLoading(true);
-
+    
     try {
-      const result = await register(name, email, password, role);
-
-      if (result?.pendingApproval) {
-        setJustRegistered(false);
-        setInfo(result.message ?? 'Thanks! Your application is awaiting admin approval.');
-        return;
-      }
-
+      await register(name, email, password, role);
       setJustRegistered(true);
-    } catch (err: unknown) {
-      if (err instanceof Error) {
-        setError(err.message);
-      } else {
-        setError('Registration failed. Please try again.');
-      }
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Registration failed. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -70,11 +57,6 @@ const Register: React.FC = () => {
           {error && (
             <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg">
               {error}
-            </div>
-          )}
-          {info && !error && (
-            <div className="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded-lg">
-              {info}
             </div>
           )}
           <div className="space-y-4">

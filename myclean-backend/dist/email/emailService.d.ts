@@ -62,9 +62,9 @@ export declare const queueEmail: <TTemplate extends EmailTemplate>({ to, templat
     id: number;
     createdAt: Date;
     updatedAt: Date;
+    status: import(".prisma/client").$Enums.EmailJobStatus;
     to: string;
     subject: string;
-    status: import(".prisma/client").$Enums.EmailJobStatus;
     template: import(".prisma/client").$Enums.EmailTemplate;
     payload: Prisma.JsonValue;
     maxAttempts: number;

@@ -58,6 +58,7 @@ async function main() {
       serviceName: 'Standard Home Cleaning',
       pricePerHour: 3000,
       durationMin: 120,
+      status: 'APPROVED',
     },
   });
   */
