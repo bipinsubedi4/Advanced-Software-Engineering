@@ -183,12 +183,11 @@ const UserManagement = () => {
       },
       {
         header: "Total",
-        render: (booking) => (
-          <div>
-            <p className="table-primary">{formatCurrency(booking.totalPrice)}</p>
-            <p className="table-secondary">{booking.paymentStatus}</p>
-          </div>
-        ),
+        render: (booking) => <p className="table-primary">{formatCurrency(booking.totalPrice)}</p>,
+      },
+      {
+        header: "Payment",
+        render: (booking) => <StatusBadge label={booking.paymentStatus} />,
       },
       {
         header: "Created",
