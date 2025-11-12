@@ -1,4 +1,8 @@
 {
+  "buildCommand": "cd myclean-frontend && npm install && npm run build",
+  "outputDirectory": "myclean-frontend/build",
+  "devCommand": "cd myclean-frontend && npm start",
+  "installCommand": "cd myclean-frontend && npm install",
   "rewrites": [
     {
       "source": "/(.*)",
@@ -6,3 +10,4 @@
     }
   ]
 }
+
