@@ -28,7 +28,7 @@ interface CleanerResult {
 }
 
 const INITIAL_FILTERS: FilterState = {
-  priceRange: [40, 180],
+  priceRange: [0, 250],
   minRating: 0,
   radiusInKm: 20,
   selectedServices: [],

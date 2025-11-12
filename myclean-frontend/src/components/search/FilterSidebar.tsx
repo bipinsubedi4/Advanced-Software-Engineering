@@ -49,7 +49,7 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({ filters, onChange, onRese
         <Slider
           range
           value={filters.priceRange}
-          min={20}
+          min={0}
           max={250}
           step={5}
           allowCross={false}

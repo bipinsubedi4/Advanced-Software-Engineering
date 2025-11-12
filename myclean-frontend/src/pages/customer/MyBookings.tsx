@@ -344,7 +344,12 @@ const MyBookings: React.FC = () => {
       newTime,
     });
 
-    alert('Reschedule request submitted successfully!');
+    // Show success message
+    setPageMessage({
+      type: 'success',
+      text: '✓ Reschedule request submitted successfully!',
+    });
+    
     setShowRescheduleModal(false);
     setNewDate('');
     setNewTime('');
@@ -361,7 +366,13 @@ const MyBookings: React.FC = () => {
     if (!selectedBooking || !user) return;
 
     console.log({ bookingId: selectedBooking.id, cancelReason });
-    alert('Booking cancellation request submitted.');
+    
+    // Show success message
+    setPageMessage({
+      type: 'success',
+      text: '✓ Your booking has been cancelled successfully.',
+    });
+    
     setShowCancelModal(false);
     setCancelReason('');
   };

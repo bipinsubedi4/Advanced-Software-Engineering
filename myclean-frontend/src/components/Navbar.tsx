@@ -66,12 +66,20 @@ const Navbar: React.FC = () => {
     navigate('/login');
   };
 
+  // Determine home route based on user role
+  const getHomeRoute = () => {
+    if (user?.role === 'PROVIDER') {
+      return '/provider/home';
+    }
+    return '/';
+  };
+
   return (
     <nav className="bg-white shadow-md">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
           <div className="flex items-center">
-            <Link to="/" className="flex-shrink-0 flex items-center">
+            <Link to={getHomeRoute()} className="flex-shrink-0 flex items-center">
               <span className="text-2xl font-bold text-blue-600">MyClean</span>
             </Link>
           </div>
