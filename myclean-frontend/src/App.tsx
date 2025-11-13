@@ -18,6 +18,7 @@ import ProviderProfile from './pages/customer/ProviderProfile';
 import MyBookings from './pages/customer/MyBookings';
 import Payment from './pages/customer/Payment';
 import CustomerMarketplace from './pages/customer/Marketplace';
+import CustomerMessages from './pages/customer/CustomerMessages';
 
 // Provider Pages
 import ProviderDashboard from './pages/provider/Dashboard';
@@ -86,6 +87,14 @@ function App() {
               element={
                 <ProtectedRoute allowedRoles={['CUSTOMER']}>
                   <Payment />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/customer/messages"
+              element={
+                <ProtectedRoute allowedRoles={['CUSTOMER']}>
+                  <CustomerMessages />
                 </ProtectedRoute>
               }
             />

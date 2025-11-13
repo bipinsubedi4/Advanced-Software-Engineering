@@ -100,8 +100,7 @@ const Navbar: React.FC = () => {
                       My Bookings
                     </Link>
                     <Link
-                      to="/my-bookings"
-                      state={{ highlightMessages: true }}
+                      to="/customer/messages"
                       className="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium"
                     >
                       Messages
@@ -252,8 +251,7 @@ const Navbar: React.FC = () => {
                       My Bookings
                     </Link>
                     <Link
-                      to="/my-bookings"
-                      state={{ highlightMessages: true }}
+                      to="/customer/messages"
                       className="block text-gray-700 hover:bg-blue-50 px-3 py-2 rounded-md text-base font-medium"
                     >
                       Messages
