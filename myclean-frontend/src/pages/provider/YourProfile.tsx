@@ -74,9 +74,6 @@ const YourProfile: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [editingPrice, setEditingPrice] = useState<number | null>(null);
   const [savingPrice, setSavingPrice] = useState<number | null>(null);
-  const [editingPostcodes, setEditingPostcodes] = useState(false);
-  const [newPostcode, setNewPostcode] = useState("");
-  const [savingPostcodes, setSavingPostcodes] = useState(false);
 
   useEffect(() => {
     const loadProfile = async () => {
