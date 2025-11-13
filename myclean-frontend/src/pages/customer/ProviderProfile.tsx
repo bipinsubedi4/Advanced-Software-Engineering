@@ -34,10 +34,11 @@ type ProviderUI = {
   profile: {
     bio?: string;
     yearsExperience?: string;
-    city?: string;
-    state?: string;
-    zipCode?: string;
-    address?: string;
+    city?: string; // Deprecated
+    state?: string; // Deprecated
+    zipCode?: string; // Deprecated
+    address?: string; // Deprecated
+    serviceSuburbs?: string[]; // New: Array of "Suburb (Postcode)"
     averageRating?: number;
     totalReviews?: number;
     totalBookings?: number;
@@ -116,6 +117,7 @@ const ProviderProfile: React.FC = () => {
             state: dto.state ?? '',
             zipCode: dto.zipCode ?? '',
             address: dto.address ?? '',
+            serviceSuburbs: (dto as any).serviceSuburbs ?? [], // New suburbs array
             averageRating: dto.averageRating ?? 0,
             totalReviews: dto.totalReviews ?? 0,
             totalBookings: dto.totalBookings ?? 0,
@@ -314,7 +316,13 @@ const ProviderProfile: React.FC = () => {
 
               <div className="flex items-center mt-2 text-gray-600">
                 <FaMapMarkerAlt className="mr-2" />
-                {provider.profile.city || '—'}, {provider.profile.state || '—'} {provider.profile.zipCode || ''}
+                {provider.profile.serviceSuburbs && provider.profile.serviceSuburbs.length > 0 ? (
+                  <span>
+                    Services {provider.profile.serviceSuburbs.length} suburb{provider.profile.serviceSuburbs.length !== 1 ? 's' : ''} in Queensland
+                  </span>
+                ) : (
+                  <span>{provider.profile.city || '—'}, {provider.profile.state || '—'}</span>
+                )}
               </div>
 
               <div className="flex items-center mt-2">
@@ -414,23 +422,50 @@ const ProviderProfile: React.FC = () => {
                   </p>
                 </div>
 
+                {/* Service Suburbs Section */}
+                {provider.profile.serviceSuburbs && provider.profile.serviceSuburbs.length > 0 && (
+                  <div>
+                    <h3 className="text-xl font-semibold mb-3 flex items-center">
+                      <FaMapMarkerAlt className="mr-2 text-indigo-600" />
+                      Service Suburbs
+                    </h3>
+                    <p className="text-sm text-gray-600 mb-3">
+                      I provide cleaning services in the following Queensland suburbs:
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {provider.profile.serviceSuburbs.map((suburb, index) => (
+                        <span
+                          key={index}
+                          className="inline-flex items-center px-4 py-2 bg-indigo-50 text-indigo-800 rounded-lg text-sm font-medium border border-indigo-200"
+                        >
+                          <FaMapMarkerAlt className="mr-2 text-indigo-600" />
+                          {suburb}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {(provider.profile.hasInsurance || provider.profile.hasVehicle || provider.profile.hasEquipment) && (
-                  <div className="flex flex-wrap gap-2">
-                    {provider.profile.hasInsurance && (
-                      <span className="flex items-center bg-green-50 text-green-700 px-3 py-1 rounded-full text-sm">
-                        <FaShieldAlt className="mr-1" /> Insured
-                      </span>
-                    )}
-                    {provider.profile.hasVehicle && (
-                      <span className="flex items-center bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-sm">
-                        <FaCar className="mr-1" /> Has Vehicle
-                      </span>
-                    )}
-                    {provider.profile.hasEquipment && (
-                      <span className="flex items-center bg-purple-50 text-purple-700 px-3 py-1 rounded-full text-sm">
-                        <FaTools className="mr-1" /> Brings Equipment
-                      </span>
-                    )}
+                  <div>
+                    <h3 className="text-xl font-semibold mb-3">Professional Details</h3>
+                    <div className="flex flex-wrap gap-2">
+                      {provider.profile.hasInsurance && (
+                        <span className="flex items-center bg-green-50 text-green-700 px-3 py-1 rounded-full text-sm">
+                          <FaShieldAlt className="mr-1" /> Insured
+                        </span>
+                      )}
+                      {provider.profile.hasVehicle && (
+                        <span className="flex items-center bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-sm">
+                          <FaCar className="mr-1" /> Has Vehicle
+                        </span>
+                      )}
+                      {provider.profile.hasEquipment && (
+                        <span className="flex items-center bg-purple-50 text-purple-700 px-3 py-1 rounded-full text-sm">
+                          <FaTools className="mr-1" /> Brings Equipment
+                        </span>
+                      )}
+                    </div>
                   </div>
                 )}
               </div>
