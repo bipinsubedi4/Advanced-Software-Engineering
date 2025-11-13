@@ -47,8 +47,6 @@ type MessagePayload = {
   receiver: MessageParticipant;
 };
 
-app.use(helmet());
-
 // CORS configuration - accept multiple origins
 const allowedOrigins = [
   "http://localhost:3000",
@@ -62,8 +60,7 @@ const isVercelDomain = (origin: string | undefined): boolean => {
   return origin.includes(".vercel.app") || allowedOrigins.includes(origin);
 };
 
-app.use("/api/services", servicesRoute);
-
+// CORS must be configured BEFORE other middleware
 app.use(
   cors({
     origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
@@ -83,8 +80,20 @@ app.use(
       return callback(new Error(`Not allowed by CORS: ${origin}`));
     },
     credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
+
+// Configure helmet to not interfere with CORS
+app.use(
+  helmet({
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+    crossOriginEmbedderPolicy: false,
+  })
+);
+
+app.use("/api/services", servicesRoute);
 
 app.use(express.json());
 
