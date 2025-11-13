@@ -35,7 +35,7 @@ const INITIAL_FILTERS: FilterState = {
   selectedServices: [],
   date: null,
   postcode: "",
-  suburb: "",
+  suburb: null,
 };
 
 const SearchProviders: React.FC = () => {
@@ -156,12 +156,23 @@ const SearchProviders: React.FC = () => {
           />
 
           <div className="space-y-6">
+            {/* Active filters display */}
             <div className="bg-white rounded-2xl shadow px-4 py-3 flex flex-wrap items-center justify-between gap-3 border border-gray-100">
               <div className="text-sm text-gray-600">
-                {filters.selectedServices.length > 0
-                  ? `Filtering by ${filters.selectedServices.join(", ")}`
-                  : "Showing all services"}
+                {filters.suburb ? (
+                  <span className="font-medium text-indigo-700">
+                    📍 Showing cleaners available in {filters.suburb}
+                  </span>
+                ) : (
+                  <span>
+                    {filters.selectedServices.length > 0
+                      ? `Filtering by ${filters.selectedServices.join(", ")}`
+                      : "Showing all services"}
+                  </span>
+                )}
                 {filters.date && ` · Available on ${filters.date.toLocaleDateString()}`}
+                {filters.selectedServices.length > 0 && filters.suburb && 
+                  ` · Services: ${filters.selectedServices.join(", ")}`}
               </div>
               <div className="flex items-center gap-3">
                 <button
