@@ -1,4 +1,4 @@
-import React, { useState, ChangeEvent, KeyboardEvent } from "react";
+import React, { useState, KeyboardEvent } from "react";
 import { FaPlus, FaTimes } from "react-icons/fa";
 
 type Step2ServiceAreasProps = {

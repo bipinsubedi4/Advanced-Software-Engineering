@@ -8,8 +8,6 @@ type Step3ServicesProps = {
 };
 
 const Step3Services: React.FC<Step3ServicesProps> = ({ selected, onChange }) => {
-  const [editingPrice, setEditingPrice] = useState<string | null>(null);
-
   const isSelected = (name: string, category: string) =>
     selected.some((service) => service.name === name && service.category === category);
 
