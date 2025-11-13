@@ -421,17 +421,14 @@ router.get("/search", async (req, res) => {
     }
     
     // Filter by postcode - provider's servicePostcodes array must include the requested postcode
-    // Also support suburb filtering (new)
+    // Store suburb filter for later JavaScript filtering (Prisma doesn't support partial matching in String[])
     const suburbFilter = typeof req.query.suburb === "string" ? req.query.suburb.trim() : undefined;
     
-    if (suburbFilter) {
-      // Filter by suburb name (matches any suburb in serviceSuburbs array that contains the text)
-      andConditions.push({
-        serviceSuburbs: {
-          hasSome: [suburbFilter],
-        },
-      });
-    } else if (postcodeFilter) {
+    // Note: We'll apply suburb filtering in JavaScript after fetching, since Prisma's hasSome
+    // requires exact matches and won't match "Rocklea" against "Rocklea (4106)"
+    
+    // Only apply postcode filter if no suburb filter (backward compatibility)
+    if (postcodeFilter && !suburbFilter) {
       // Backward compatibility: filter by postcode
       andConditions.push({
         OR: [
@@ -456,7 +453,7 @@ router.get("/search", async (req, res) => {
       AND: andConditions,
     };
 
-    const providers = await prisma.providerProfile.findMany({
+    let providers = await prisma.providerProfile.findMany({
       where,
       include: {
         user: { select: { id: true, name: true, email: true, phone: true, profileImage: true } },
@@ -465,6 +462,36 @@ router.get("/search", async (req, res) => {
       },
       take: limit * 3, // fetch extra to allow distance filtering before pagination
     });
+
+    // Apply suburb filtering in JavaScript for partial matching
+    if (suburbFilter) {
+      const searchTerm = suburbFilter.toLowerCase();
+      console.log(`🔍 Filtering providers by suburb: "${searchTerm}"`);
+      
+      providers = providers.filter((provider) => {
+        const providerData = provider as any; // Type assertion for new fields
+        
+        // Check serviceSuburbs array
+        const hasSuburbMatch = providerData.serviceSuburbs?.some((area: string) => 
+          area.toLowerCase().includes(searchTerm)
+        );
+        
+        // Also check old servicePostcodes for backward compatibility
+        const hasPostcodeMatch = providerData.servicePostcodes?.some((postcode: string) => 
+          postcode.toLowerCase().includes(searchTerm)
+        );
+        
+        const matches = hasSuburbMatch || hasPostcodeMatch;
+        
+        if (matches) {
+          console.log(`✅ Provider ${provider.user.name} matches - suburbs: ${providerData.serviceSuburbs?.join(', ')}`);
+        }
+        
+        return matches;
+      });
+      
+      console.log(`📊 Found ${providers.length} providers matching "${searchTerm}"`);
+    }
 
     const enriched = providers
       .map((provider) => {
