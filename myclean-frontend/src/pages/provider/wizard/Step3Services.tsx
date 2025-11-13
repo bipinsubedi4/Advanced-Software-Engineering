@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 import { SERVICE_GROUPS } from "./constants";
 import { WizardServiceSelection } from "./types";
 
