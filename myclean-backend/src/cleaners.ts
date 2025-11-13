@@ -503,12 +503,14 @@ router.get("/search", async (req, res) => {
           ? provider.availability.some((slot) => slot.dayOfWeek === availabilityDay && slot.isAvailable)
           : true;
 
+        const providerData = provider as any; // Type assertion for new fields
         return {
           id: provider.id,
           name: provider.user?.name ?? "New Provider",
           bio: provider.bio ?? "",
           city: provider.city ?? "",
           state: provider.state ?? "",
+          serviceSuburbs: providerData.serviceSuburbs ?? [], // New: service suburbs array
           averageRating: provider.averageRating ?? 0,
           totalReviews: provider.totalReviews ?? 0,
           minPrice: minServicePrice,

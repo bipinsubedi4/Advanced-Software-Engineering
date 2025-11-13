@@ -14,14 +14,15 @@ interface CleanerResult {
   id: number;
   name: string;
   bio: string;
-  city: string;
-  state: string;
+  city: string; // Deprecated
+  state: string; // Deprecated
+  serviceRadius: number; // Deprecated
+  serviceSuburbs?: string[]; // New: Array of "Suburb (Postcode)"
   averageRating: number;
   totalReviews: number;
   minPrice: number | null;
   maxPrice: number | null;
   services: Array<{ id: number; serviceName: string; pricePerHour: number; durationMin: number }>;
-  serviceRadius: number;
   distanceKm: number | null;
   profileImage: string | null;
   latitude?: number | null;
@@ -230,15 +231,23 @@ const SearchProviders: React.FC = () => {
                         </div>
                         <p className="text-sm text-gray-600">{cleaner.bio || "No bio provided."}</p>
                         <div className="flex flex-wrap gap-3 text-sm text-gray-600">
-                          <span>
-                            {cleaner.city}, {cleaner.state}
-                          </span>
+                          {/* Service Suburbs Display */}
+                          {cleaner.serviceSuburbs && cleaner.serviceSuburbs.length > 0 ? (
+                            <span className="flex items-center">
+                              <FaMapMarkerAlt className="mr-1 text-indigo-500" />
+                              Services: {cleaner.serviceSuburbs.slice(0, 3).join(", ")}
+                              {cleaner.serviceSuburbs.length > 3 && ` +${cleaner.serviceSuburbs.length - 3} more`}
+                            </span>
+                          ) : (
+                            <span>
+                              {cleaner.city}, {cleaner.state}
+                            </span>
+                          )}
                           {cleaner.minPrice != null && (
                             <span>
                               From ${cleaner.minPrice.toFixed(0)}/hr · up to ${cleaner.maxPrice?.toFixed(0) ?? cleaner.minPrice.toFixed(0)}
                             </span>
                           )}
-                          <span>Radius {cleaner.serviceRadius} km</span>
                         </div>
                         <div className="flex flex-wrap gap-2">
                           {cleaner.services.slice(0, 6).map((service) => (
