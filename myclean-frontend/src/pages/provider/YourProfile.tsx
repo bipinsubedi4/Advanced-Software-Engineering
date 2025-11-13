@@ -71,6 +71,11 @@ const YourProfile: React.FC = () => {
   const [profile, setProfile] = useState<ProviderProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [editingPrice, setEditingPrice] = useState<number | null>(null);
+  const [savingPrice, setSavingPrice] = useState<number | null>(null);
+  const [editingPostcodes, setEditingPostcodes] = useState(false);
+  const [newPostcode, setNewPostcode] = useState("");
+  const [savingPostcodes, setSavingPostcodes] = useState(false);
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -133,12 +138,6 @@ const YourProfile: React.FC = () => {
       </div>
     );
   }
-
-  const [editingPrice, setEditingPrice] = useState<number | null>(null);
-  const [savingPrice, setSavingPrice] = useState<number | null>(null);
-  const [editingPostcodes, setEditingPostcodes] = useState(false);
-  const [newPostcode, setNewPostcode] = useState("");
-  const [savingPostcodes, setSavingPostcodes] = useState(false);
 
   const serviceStatusClass = (status: string) => {
     switch (status) {
