@@ -21,7 +21,7 @@ export interface ProfileWizardState {
   fullName: string;
   phone: string;
   bio: string;
-  servicePostcodes: string[];
+  serviceSuburbs: string[]; // Changed from servicePostcodes to serviceSuburbs
   services: WizardServiceSelection[];
   availability: DayAvailability[];
 }

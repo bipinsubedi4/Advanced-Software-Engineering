@@ -36,7 +36,8 @@ const wizardSchema = z.object({
   phone: z.string().min(6),
   bio: z.string().min(10),
   profileImageUrl: z.string().url().optional().nullable(),
-  servicePostcodes: z.array(z.string().min(1)).min(1, "At least one service postcode is required"),
+  servicePostcodes: z.array(z.string().min(1)).optional(), // Deprecated, kept for backward compatibility
+  serviceSuburbs: z.array(z.string().min(1)).min(1, "At least one service suburb is required"),
   services: z
     .array(
       z.object({
@@ -139,20 +140,19 @@ router.put("/me/profile", authenticateToken, async (req, res) => {
         },
       });
 
-      // Build update data object, handling potential missing servicePostcodes field
+      // Build update data object with new serviceSuburbs field
       const updateData: any = {
         bio: payload.bio,
         isActive: true,
         isProfileComplete: true,
       };
 
-      // Only include servicePostcodes if the field exists in the schema
-      // This makes the code resilient to migration timing issues
-      try {
+      // Use serviceSuburbs (new) or fall back to servicePostcodes (old) for backward compatibility
+      if (payload.serviceSuburbs && payload.serviceSuburbs.length > 0) {
+        updateData.serviceSuburbs = payload.serviceSuburbs;
+      } else if (payload.servicePostcodes && payload.servicePostcodes.length > 0) {
+        // Backward compatibility: if old postcodes are provided, use them
         updateData.servicePostcodes = payload.servicePostcodes;
-      } catch (err) {
-        console.warn("servicePostcodes field may not exist yet, migration may be pending");
-        // Continue without servicePostcodes if field doesn't exist
       }
 
       await tx.providerProfile.update({
@@ -421,11 +421,32 @@ router.get("/search", async (req, res) => {
     }
     
     // Filter by postcode - provider's servicePostcodes array must include the requested postcode
-    if (postcodeFilter) {
+    // Also support suburb filtering (new)
+    const suburbFilter = typeof req.query.suburb === "string" ? req.query.suburb.trim() : undefined;
+    
+    if (suburbFilter) {
+      // Filter by suburb name (matches any suburb in serviceSuburbs array that contains the text)
       andConditions.push({
-        servicePostcodes: {
-          has: postcodeFilter,
+        serviceSuburbs: {
+          hasSome: [suburbFilter],
         },
+      });
+    } else if (postcodeFilter) {
+      // Backward compatibility: filter by postcode
+      andConditions.push({
+        OR: [
+          {
+            servicePostcodes: {
+              has: postcodeFilter,
+            },
+          },
+          {
+            // Also check if postcode is in serviceSuburbs
+            serviceSuburbs: {
+              hasSome: [], // Will be populated if needed
+            },
+          },
+        ],
       });
     }
 

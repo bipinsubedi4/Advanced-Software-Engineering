@@ -23,7 +23,7 @@ const initialState: ProfileWizardState = {
   fullName: "",
   phone: "",
   bio: "",
-  servicePostcodes: [],
+  serviceSuburbs: [],
   services: [],
   availability: buildDefaultAvailability(),
 };
@@ -84,7 +84,7 @@ const ProfileWizard: React.FC = () => {
         fullName: profile.user?.name ?? prev.fullName,
         phone: profile.user?.phone ?? prev.phone,
         bio: profile.bio ?? prev.bio,
-        servicePostcodes: (profile as any).servicePostcodes ?? prev.servicePostcodes,
+        serviceSuburbs: (profile as any).serviceSuburbs ?? (profile as any).servicePostcodes ?? prev.serviceSuburbs,
         services: profile.services
           ? dedupeServices(
               profile.services.map((service: any) => ({
@@ -155,7 +155,7 @@ const ProfileWizard: React.FC = () => {
         formData.fullName.trim().length > 1 &&
         formData.phone.trim().length > 5 &&
         formData.bio.trim().length > 10,
-      () => formData.servicePostcodes.length > 0,
+      () => formData.serviceSuburbs.length > 0,
       () => formData.services.length > 0,
       () => formData.availability.some((day) => day.blocks.length > 0),
     ],
@@ -177,7 +177,7 @@ const ProfileWizard: React.FC = () => {
     phone: formData.phone.trim(),
     bio: formData.bio.trim(),
     profileImageUrl: formData.profileImageUrl ?? undefined,
-    servicePostcodes: formData.servicePostcodes,
+    serviceSuburbs: formData.serviceSuburbs,
     services: formData.services.map((service) => ({
       name: service.name,
       category: service.category,
@@ -286,8 +286,8 @@ const ProfileWizard: React.FC = () => {
 
             {currentStep === 1 && (
               <Step2ServiceAreas
-                servicePostcodes={formData.servicePostcodes}
-                onChange={(postcodes) => handleFieldUpdate({ servicePostcodes: postcodes })}
+                serviceSuburbs={formData.serviceSuburbs}
+                onChange={(suburbs) => handleFieldUpdate({ serviceSuburbs: suburbs })}
               />
             )}
 

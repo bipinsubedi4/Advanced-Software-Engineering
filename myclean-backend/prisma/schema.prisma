@@ -97,7 +97,8 @@ model ProviderProfile {
   latitude          Float?   // Deprecated - kept for migration
   longitude         Float?   // Deprecated - kept for migration
   serviceRadius     Int       @default(10) // Deprecated - kept for migration
-  servicePostcodes  String[]  @default([]) // New: Array of postcodes where cleaner provides service
+  servicePostcodes  String[]  @default([]) // Deprecated - replaced by serviceSuburbs
+  serviceSuburbs    String[]  @default([]) // New: Array of "Suburb (Postcode)" where cleaner provides service
   isVerified        Boolean   @default(true)
   isActive          Boolean   @default(true)
   isProfileComplete Boolean   @default(false) @map("profileComplete")

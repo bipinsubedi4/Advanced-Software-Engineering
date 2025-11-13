@@ -41,7 +41,8 @@ export type AdminProviderProfile = {
   city?: string | null; // Deprecated
   state?: string | null; // Deprecated
   serviceRadius?: number | null; // Deprecated
-  servicePostcodes?: string[]; // New
+  servicePostcodes?: string[]; // Deprecated
+  serviceSuburbs?: string[]; // New: "Suburb (Postcode)" format
   createdAt: string;
   user: {
     id: number;

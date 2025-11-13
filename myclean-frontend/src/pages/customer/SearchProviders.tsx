@@ -35,6 +35,7 @@ const INITIAL_FILTERS: FilterState = {
   selectedServices: [],
   date: null,
   postcode: "",
+  suburb: "",
 };
 
 const SearchProviders: React.FC = () => {
@@ -66,7 +67,10 @@ const SearchProviders: React.FC = () => {
         params.date = filters.date.toISOString().split("T")[0];
       }
 
-      if (filters.postcode) {
+      // Send suburb filter (new) or postcode (old) for backward compatibility
+      if (filters.suburb) {
+        params.suburb = filters.suburb.trim();
+      } else if (filters.postcode) {
         params.postcode = filters.postcode.trim();
       }
 

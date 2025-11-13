@@ -123,19 +123,26 @@ const UserManagement = () => {
         render: (profile) => profile.user.phone ?? "—",
       },
       {
-        header: "Service Areas",
-        render: (profile) =>
-          profile.servicePostcodes && profile.servicePostcodes.length > 0 ? (
+        header: "Service Suburbs",
+        render: (profile) => {
+          const suburbs = profile.serviceSuburbs || profile.servicePostcodes;
+          return suburbs && suburbs.length > 0 ? (
             <div className="flex flex-wrap gap-1">
-              {profile.servicePostcodes.map((postcode) => (
-                <span key={postcode} className="px-2 py-1 bg-indigo-100 text-indigo-800 rounded text-xs">
-                  {postcode}
+              {suburbs.slice(0, 3).map((suburb) => (
+                <span key={suburb} className="px-2 py-1 bg-indigo-100 text-indigo-800 rounded text-xs">
+                  {suburb}
                 </span>
               ))}
+              {suburbs.length > 3 && (
+                <span className="px-2 py-1 bg-gray-100 text-gray-600 rounded text-xs">
+                  +{suburbs.length - 3} more
+                </span>
+              )}
             </div>
           ) : (
             <span className="table-secondary">Not set</span>
-          ),
+          );
+        },
       },
       {
         header: "Services",
