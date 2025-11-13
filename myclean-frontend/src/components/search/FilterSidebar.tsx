@@ -10,6 +10,7 @@ export type FilterState = {
   radiusInKm: number;
   selectedServices: string[];
   date: Date | null;
+  postcode: string;
 };
 
 type FilterSidebarProps = {
@@ -59,6 +60,19 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({ filters, onChange, onRese
             }
           }}
         />
+      </div>
+
+      <div>
+        <p className="text-sm font-medium text-gray-700 mb-2">Service Postcode</p>
+        <input
+          type="text"
+          value={filters.postcode || ""}
+          onChange={(e) => onChange({ postcode: e.target.value })}
+          placeholder="Enter postcode (e.g., 3000)"
+          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+          maxLength={10}
+        />
+        <p className="text-xs text-gray-500 mt-1">Find cleaners who service this area</p>
       </div>
 
       <div>

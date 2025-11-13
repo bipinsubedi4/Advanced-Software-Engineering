@@ -123,8 +123,19 @@ const UserManagement = () => {
         render: (profile) => profile.user.phone ?? "—",
       },
       {
-        header: "Location",
-        render: (profile) => (profile.city ? `${profile.city}, ${profile.state ?? ""}` : "Not set"),
+        header: "Service Areas",
+        render: (profile) =>
+          profile.servicePostcodes && profile.servicePostcodes.length > 0 ? (
+            <div className="flex flex-wrap gap-1">
+              {profile.servicePostcodes.map((postcode) => (
+                <span key={postcode} className="px-2 py-1 bg-indigo-100 text-indigo-800 rounded text-xs">
+                  {postcode}
+                </span>
+              ))}
+            </div>
+          ) : (
+            <span className="table-secondary">Not set</span>
+          ),
       },
       {
         header: "Services",

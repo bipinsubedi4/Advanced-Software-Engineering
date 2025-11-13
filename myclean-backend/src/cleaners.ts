@@ -36,18 +36,13 @@ const wizardSchema = z.object({
   phone: z.string().min(6),
   bio: z.string().min(10),
   profileImageUrl: z.string().url().optional().nullable(),
-  address: z.string().min(1),
-  city: z.string().min(1),
-  state: z.string().min(1),
-  zipCode: z.string().min(1),
-  serviceRadius: z.number().int().min(1).max(200),
-  latitude: z.number().min(-90).max(90).optional().nullable(),
-  longitude: z.number().min(-180).max(180).optional().nullable(),
+  servicePostcodes: z.array(z.string().min(1)).min(1, "At least one service postcode is required"),
   services: z
     .array(
       z.object({
         name: z.string().min(1),
         category: z.string().min(1),
+        pricePerHour: z.number().min(0).optional(), // Price in dollars (will be converted to cents)
       })
     )
     .min(1),
@@ -110,11 +105,15 @@ router.get("/me", authenticateToken, async (req, res) => {
 });
 
 const normalizeServices = (services: WizardPayload["services"]) => {
-  const map = new Map<string, { name: string; category: string }>();
+  const map = new Map<string, { name: string; category: string; pricePerHour?: number }>();
   for (const service of services) {
     const key = service.name.toLowerCase();
     if (!map.has(key)) {
-      map.set(key, { name: service.name, category: service.category });
+      map.set(key, { 
+        name: service.name, 
+        category: service.category,
+        pricePerHour: service.pricePerHour 
+      });
     }
   }
   return Array.from(map.values());
@@ -144,13 +143,7 @@ router.put("/me/profile", authenticateToken, async (req, res) => {
         where: { id: profile.id },
         data: {
           bio: payload.bio,
-          address: payload.address,
-          city: payload.city,
-          state: payload.state,
-          zipCode: payload.zipCode,
-          serviceRadius: payload.serviceRadius,
-          latitude: payload.latitude ?? profile.latitude,
-          longitude: payload.longitude ?? profile.longitude,
+          servicePostcodes: payload.servicePostcodes,
           isActive: true,
           isProfileComplete: true,
         },
@@ -168,12 +161,15 @@ router.put("/me/profile", authenticateToken, async (req, res) => {
       for (const service of services) {
         const key = service.name.toLowerCase();
         const current = existingByName.get(key);
+        const priceInCents = service.pricePerHour ? Math.round(service.pricePerHour * 100) : (current?.pricePerHour ?? 0);
+        
         if (current) {
           await tx.providerService.update({
             where: { id: current.id },
             data: {
               serviceName: service.name,
               description: `${service.category} service`,
+              pricePerHour: priceInCents, // Update price if provided
               isActive: true,
               status: "PENDING",
               rejectionReason: null,
@@ -185,7 +181,7 @@ router.put("/me/profile", authenticateToken, async (req, res) => {
               providerId: profile.id,
               serviceName: service.name,
               description: `${service.category} service`,
-              pricePerHour: 0,
+              pricePerHour: priceInCents,
               durationMin: 60,
               isActive: true,
               status: "PENDING",
@@ -337,6 +333,7 @@ router.get("/search", async (req, res) => {
     const minRatingParam = req.query.minRating as undefined | string | string[];
     const serviceParam = req.query.service as undefined | string | string[];
     const dateParam = req.query.date as undefined | string | string[];
+    const postcodeParam = req.query.postcode as undefined | string | string[];
     const radiusParam = req.query.radiusInKm as undefined | string | string[];
     const latParam = req.query.lat as undefined | string | string[];
     const lngParam = req.query.lng as undefined | string | string[];
@@ -346,6 +343,7 @@ router.get("/search", async (req, res) => {
 
     const queryString = typeof qParam === "string" ? qParam.trim() : "";
     const serviceFilters = parseArrayParam(serviceParam);
+    const postcodeFilter = typeof postcodeParam === "string" ? postcodeParam.trim() : (Array.isArray(postcodeParam) ? postcodeParam[0]?.trim() : null);
     const minPriceValue = parseNumber(minPriceParam);
     const maxPriceValue = parseNumber(maxPriceParam);
     const minRatingValue = parseNumber(minRatingParam);
@@ -408,6 +406,15 @@ router.get("/search", async (req, res) => {
             },
           },
         });
+      });
+    }
+    
+    // Filter by postcode - provider's servicePostcodes array must include the requested postcode
+    if (postcodeFilter) {
+      andConditions.push({
+        servicePostcodes: {
+          has: postcodeFilter,
+        },
       });
     }
 
@@ -500,6 +507,89 @@ router.get("/search", async (req, res) => {
   } catch (error) {
     console.error("Cleaner search failed", error);
     res.status(500).json({ error: "Failed to search cleaners" });
+  }
+});
+
+// Update service price per hour
+router.patch("/me/services/:serviceId/price", authenticateToken, async (req, res) => {
+  try {
+    const userId = (req as AuthRequest).user?.sub;
+    if (!userId) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    const serviceId = Number(req.params.serviceId);
+    const { pricePerHour } = req.body; // Price in dollars
+
+    if (!pricePerHour || pricePerHour < 0) {
+      return res.status(400).json({ error: "Valid price per hour is required" });
+    }
+
+    const profile = await prisma.providerProfile.findUnique({ where: { userId } });
+    if (!profile) {
+      return res.status(404).json({ error: "Provider profile not found" });
+    }
+
+    const service = await prisma.providerService.findFirst({
+      where: { id: serviceId, providerId: profile.id },
+    });
+
+    if (!service) {
+      return res.status(404).json({ error: "Service not found" });
+    }
+
+    const priceInCents = Math.round(pricePerHour * 100);
+
+    const updated = await prisma.providerService.update({
+      where: { id: serviceId },
+      data: { pricePerHour: priceInCents },
+    });
+
+    res.json({
+      success: true,
+      service: {
+        ...updated,
+        pricePerHour: updated.pricePerHour / 100, // Return in dollars
+      },
+    });
+  } catch (error) {
+    console.error("Failed to update service price", error);
+    res.status(500).json({ error: "Failed to update service price" });
+  }
+});
+
+// Update service postcodes
+router.patch("/me/postcodes", authenticateToken, async (req, res) => {
+  try {
+    const userId = (req as AuthRequest).user?.sub;
+    if (!userId) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    const { servicePostcodes } = req.body;
+
+    if (!Array.isArray(servicePostcodes) || servicePostcodes.length === 0) {
+      return res.status(400).json({ error: "At least one service postcode is required" });
+    }
+
+    const profile = await prisma.providerProfile.findUnique({ where: { userId } });
+    if (!profile) {
+      return res.status(404).json({ error: "Provider profile not found" });
+    }
+
+    const updated = await prisma.providerProfile.update({
+      where: { id: profile.id },
+      data: { servicePostcodes },
+      include: profileInclude,
+    });
+
+    res.json({
+      success: true,
+      profile: withProfileCompletion(updated),
+    });
+  } catch (error) {
+    console.error("Failed to update service postcodes", error);
+    res.status(500).json({ error: "Failed to update service postcodes" });
   }
 });
 

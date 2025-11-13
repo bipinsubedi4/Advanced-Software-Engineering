@@ -38,9 +38,10 @@ export type AdminUser = {
 export type AdminProviderProfile = {
   id: number;
   userId: number;
-  city: string | null;
-  state: string | null;
-  serviceRadius: number | null;
+  city?: string | null; // Deprecated
+  state?: string | null; // Deprecated
+  serviceRadius?: number | null; // Deprecated
+  servicePostcodes?: string[]; // New
   createdAt: string;
   user: {
     id: number;

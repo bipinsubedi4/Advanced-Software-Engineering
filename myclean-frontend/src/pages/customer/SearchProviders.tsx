@@ -34,6 +34,7 @@ const INITIAL_FILTERS: FilterState = {
   radiusInKm: 20,
   selectedServices: [],
   date: null,
+  postcode: "",
 };
 
 const SearchProviders: React.FC = () => {
@@ -63,6 +64,10 @@ const SearchProviders: React.FC = () => {
 
       if (filters.date) {
         params.date = filters.date.toISOString().split("T")[0];
+      }
+
+      if (filters.postcode) {
+        params.postcode = filters.postcode.trim();
       }
 
       if (clientLocation.lat != null && clientLocation.lng != null) {

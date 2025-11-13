@@ -30,10 +30,11 @@ interface ProviderProfile {
     profileImage: string | null;
   };
   bio: string;
-  address: string;
-  city: string;
-  state: string;
-  zipCode: string;
+  address?: string; // Deprecated
+  city?: string; // Deprecated
+  state?: string; // Deprecated
+  zipCode?: string; // Deprecated
+  servicePostcodes?: string[]; // New
   yearsExperience: string;
   hasInsurance: boolean;
   insuranceProvider: string | null;
@@ -133,9 +134,11 @@ const YourProfile: React.FC = () => {
     );
   }
 
-  const fullAddress = [profile.address, profile.city, profile.state, profile.zipCode]
-    .filter(Boolean)
-    .join(', ');
+  const [editingPrice, setEditingPrice] = useState<number | null>(null);
+  const [savingPrice, setSavingPrice] = useState<number | null>(null);
+  const [editingPostcodes, setEditingPostcodes] = useState(false);
+  const [newPostcode, setNewPostcode] = useState("");
+  const [savingPostcodes, setSavingPostcodes] = useState(false);
 
   const serviceStatusClass = (status: string) => {
     switch (status) {
@@ -229,12 +232,110 @@ const YourProfile: React.FC = () => {
                     <p className="text-gray-900">{profile.user?.phone || '—'}</p>
                   </div>
                 </div>
-                {fullAddress && (
+                {profile.servicePostcodes && profile.servicePostcodes.length > 0 && (
                   <div className="flex items-start space-x-3 md:col-span-2">
                     <FaMapMarkerAlt className="text-gray-400 mt-1" />
-                    <div>
-                      <p className="text-sm font-medium text-gray-500">Address</p>
-                      <p className="text-gray-900">{fullAddress}</p>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-gray-500 mb-2">Service Areas (Postcodes)</p>
+                      {!editingPostcodes ? (
+                        <div className="flex flex-wrap gap-2">
+                          {profile.servicePostcodes.map((postcode) => (
+                            <span
+                              key={postcode}
+                              className="inline-flex items-center px-3 py-1 bg-indigo-100 text-indigo-800 rounded-full text-sm font-medium"
+                            >
+                              {postcode}
+                            </span>
+                          ))}
+                          <button
+                            onClick={() => setEditingPostcodes(true)}
+                            className="text-sm text-indigo-600 hover:text-indigo-800 font-medium"
+                          >
+                            Edit
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          <div className="flex flex-wrap gap-2">
+                            {profile.servicePostcodes.map((postcode) => (
+                              <span
+                                key={postcode}
+                                className="inline-flex items-center gap-1 px-3 py-1 bg-indigo-100 text-indigo-800 rounded-full text-sm font-medium"
+                              >
+                                {postcode}
+                                <button
+                                  onClick={() => {
+                                    const updated = profile.servicePostcodes!.filter((p) => p !== postcode);
+                                    setProfile({ ...profile, servicePostcodes: updated });
+                                  }}
+                                  className="text-indigo-600 hover:text-indigo-800"
+                                >
+                                  ×
+                                </button>
+                              </span>
+                            ))}
+                          </div>
+                          <div className="flex gap-2">
+                            <input
+                              type="text"
+                              value={newPostcode}
+                              onChange={(e) => setNewPostcode(e.target.value)}
+                              placeholder="Add postcode"
+                              className="flex-1 rounded border border-gray-300 px-2 py-1 text-sm"
+                              maxLength={10}
+                            />
+                            <button
+                              onClick={() => {
+                                if (newPostcode.trim() && !profile.servicePostcodes?.includes(newPostcode.trim())) {
+                                  setProfile({
+                                    ...profile,
+                                    servicePostcodes: [...(profile.servicePostcodes || []), newPostcode.trim()],
+                                  });
+                                  setNewPostcode("");
+                                }
+                              }}
+                              className="px-3 py-1 bg-indigo-600 text-white rounded text-sm hover:bg-indigo-700"
+                            >
+                              Add
+                            </button>
+                          </div>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={async () => {
+                                setSavingPostcodes(true);
+                                try {
+                                  await axios.patch(
+                                    `${API_BASE}/api/cleaners/me/postcodes`,
+                                    { servicePostcodes: profile.servicePostcodes },
+                                    { headers: { Authorization: `Bearer ${token}` } }
+                                  );
+                                  setEditingPostcodes(false);
+                                } catch (err: any) {
+                                  console.error("Failed to update postcodes", err);
+                                  alert(err.response?.data?.error || "Failed to update postcodes");
+                                } finally {
+                                  setSavingPostcodes(false);
+                                }
+                              }}
+                              disabled={savingPostcodes}
+                              className="px-4 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700 disabled:bg-gray-400"
+                            >
+                              {savingPostcodes ? "Saving..." : "Save"}
+                            </button>
+                            <button
+                              onClick={() => {
+                                setEditingPostcodes(false);
+                                setNewPostcode("");
+                                // Reload profile to reset changes
+                                window.location.reload();
+                              }}
+                              className="px-4 py-1 bg-gray-300 text-gray-700 rounded text-sm hover:bg-gray-400"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
@@ -352,10 +453,61 @@ const YourProfile: React.FC = () => {
                           )}
                         </div>
                         <div className="text-right">
-                          <p className="text-2xl font-bold text-indigo-600">
-                            ${((service.pricePerHour || 0) / 100).toFixed(2)}
-                          </p>
-                          <p className="text-sm text-gray-500">per hour</p>
+                          {editingPrice === service.id ? (
+                            <div className="space-y-2">
+                              <input
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                defaultValue={(service.pricePerHour / 100).toFixed(2)}
+                                onBlur={async (e) => {
+                                  const newPrice = parseFloat(e.target.value);
+                                  if (!isNaN(newPrice) && newPrice >= 0 && newPrice !== service.pricePerHour / 100) {
+                                    setSavingPrice(service.id);
+                                    try {
+                                      await axios.patch(
+                                        `${API_BASE}/api/cleaners/me/services/${service.id}/price`,
+                                        { pricePerHour: newPrice },
+                                        { headers: { Authorization: `Bearer ${token}` } }
+                                      );
+                                      setProfile({
+                                        ...profile,
+                                        services: profile.services.map((s) =>
+                                          s.id === service.id ? { ...s, pricePerHour: Math.round(newPrice * 100) } : s
+                                        ),
+                                      });
+                                    } catch (err: any) {
+                                      console.error("Failed to update price", err);
+                                      alert(err.response?.data?.error || "Failed to update price");
+                                    } finally {
+                                      setSavingPrice(null);
+                                      setEditingPrice(null);
+                                    }
+                                  } else {
+                                    setEditingPrice(null);
+                                  }
+                                }}
+                                className="w-24 rounded border border-gray-300 px-2 py-1 text-sm text-right"
+                                autoFocus
+                              />
+                              {savingPrice === service.id && (
+                                <p className="text-xs text-gray-500">Saving...</p>
+                              )}
+                            </div>
+                          ) : (
+                            <div>
+                              <p className="text-2xl font-bold text-indigo-600">
+                                ${((service.pricePerHour || 0) / 100).toFixed(2)}
+                              </p>
+                              <p className="text-sm text-gray-500">per hour</p>
+                              <button
+                                onClick={() => setEditingPrice(service.id)}
+                                className="text-xs text-indigo-600 hover:text-indigo-800 mt-1"
+                              >
+                                Edit price
+                              </button>
+                            </div>
+                          )}
                           {!service.isActive && (
                             <p className="text-xs text-gray-500 mt-1">Inactive in marketplace</p>
                           )}

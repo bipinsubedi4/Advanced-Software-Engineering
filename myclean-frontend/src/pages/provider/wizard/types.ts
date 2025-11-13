@@ -2,6 +2,7 @@ export type WizardServiceSelection = {
   id: string;
   name: string;
   category: string;
+  pricePerHour?: number; // Price in dollars
 };
 
 export type AvailabilityBlock = {
@@ -20,13 +21,7 @@ export interface ProfileWizardState {
   fullName: string;
   phone: string;
   bio: string;
-  address: string;
-  city: string;
-  state: string;
-  zipCode: string;
-  latitude: number | null;
-  longitude: number | null;
-  serviceRadius: number;
+  servicePostcodes: string[];
   services: WizardServiceSelection[];
   availability: DayAvailability[];
 }

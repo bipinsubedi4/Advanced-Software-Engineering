@@ -5,7 +5,7 @@ import Card from "../../components/Card";
 import { useAuth } from "../../context/AuthContext";
 import { useProviderProfile } from "../../hooks/useProviderProfile";
 import Step1Personal from "./wizard/Step1Personal";
-import Step2Location from "./wizard/Step2Location";
+import Step2ServiceAreas from "./wizard/Step2ServiceAreas";
 import Step3Services from "./wizard/Step3Services";
 import Step4Availability from "./wizard/Step4Availability";
 import { DAY_NAMES, findServiceCategory } from "./wizard/constants";
@@ -23,13 +23,7 @@ const initialState: ProfileWizardState = {
   fullName: "",
   phone: "",
   bio: "",
-  address: "",
-  city: "",
-  state: "",
-  zipCode: "",
-  serviceRadius: 10,
-  latitude: null,
-  longitude: null,
+  servicePostcodes: [],
   services: [],
   availability: buildDefaultAvailability(),
 };
@@ -90,19 +84,14 @@ const ProfileWizard: React.FC = () => {
         fullName: profile.user?.name ?? prev.fullName,
         phone: profile.user?.phone ?? prev.phone,
         bio: profile.bio ?? prev.bio,
-        address: profile.address ?? prev.address,
-        city: profile.city ?? prev.city,
-        state: profile.state ?? prev.state,
-        zipCode: profile.zipCode ?? prev.zipCode,
-        latitude: profile.latitude ?? prev.latitude,
-        longitude: profile.longitude ?? prev.longitude,
-        serviceRadius: profile.serviceRadius ?? prev.serviceRadius,
+        servicePostcodes: (profile as any).servicePostcodes ?? prev.servicePostcodes,
         services: profile.services
           ? dedupeServices(
               profile.services.map((service: any) => ({
                 id: String(service.id),
                 name: service.serviceName,
                 category: findServiceCategory(service.serviceName),
+                pricePerHour: service.pricePerHour ? service.pricePerHour / 100 : undefined,
               }))
             )
           : prev.services,
@@ -166,11 +155,7 @@ const ProfileWizard: React.FC = () => {
         formData.fullName.trim().length > 1 &&
         formData.phone.trim().length > 5 &&
         formData.bio.trim().length > 10,
-      () =>
-        formData.address.trim().length > 3 &&
-        formData.city.trim().length > 1 &&
-        formData.state.trim().length > 1 &&
-        formData.zipCode.trim().length > 2,
+      () => formData.servicePostcodes.length > 0,
       () => formData.services.length > 0,
       () => formData.availability.some((day) => day.blocks.length > 0),
     ],
@@ -192,16 +177,11 @@ const ProfileWizard: React.FC = () => {
     phone: formData.phone.trim(),
     bio: formData.bio.trim(),
     profileImageUrl: formData.profileImageUrl ?? undefined,
-    address: formData.address.trim(),
-    city: formData.city.trim(),
-    state: formData.state.trim(),
-    zipCode: formData.zipCode.trim(),
-    latitude: formData.latitude ?? undefined,
-    longitude: formData.longitude ?? undefined,
-    serviceRadius: formData.serviceRadius,
+    servicePostcodes: formData.servicePostcodes,
     services: formData.services.map((service) => ({
       name: service.name,
       category: service.category,
+      pricePerHour: (service as any).pricePerHour, // Include price if set
     })),
     availability: formData.availability
       .filter((day) => day.blocks.length > 0)
@@ -305,17 +285,9 @@ const ProfileWizard: React.FC = () => {
             )}
 
             {currentStep === 1 && (
-              <Step2Location
-                data={{
-                  address: formData.address,
-                  city: formData.city,
-                  state: formData.state,
-                  zipCode: formData.zipCode,
-                  latitude: formData.latitude,
-                  longitude: formData.longitude,
-                  serviceRadius: formData.serviceRadius,
-                }}
-                onChange={handleFieldUpdate}
+              <Step2ServiceAreas
+                servicePostcodes={formData.servicePostcodes}
+                onChange={(postcodes) => handleFieldUpdate({ servicePostcodes: postcodes })}
               />
             )}
 

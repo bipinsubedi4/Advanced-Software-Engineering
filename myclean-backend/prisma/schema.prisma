@@ -90,13 +90,14 @@ model ProviderProfile {
   hasVehicle        Boolean   @default(false)
   hasEquipment      Boolean   @default(false)
   certifications    String?
-  address           String?
-  city              String?
-  state             String?
-  zipCode           String?
-  latitude          Float?
-  longitude         Float?
-  serviceRadius     Int       @default(10)
+  address           String?  // Deprecated - kept for migration
+  city              String?  // Deprecated - kept for migration
+  state             String?  // Deprecated - kept for migration
+  zipCode           String?  // Deprecated - kept for migration
+  latitude          Float?   // Deprecated - kept for migration
+  longitude         Float?   // Deprecated - kept for migration
+  serviceRadius     Int       @default(10) // Deprecated - kept for migration
+  servicePostcodes  String[]  @default([]) // New: Array of postcodes where cleaner provides service
   isVerified        Boolean   @default(true)
   isActive          Boolean   @default(true)
   isProfileComplete Boolean   @default(false) @map("profileComplete")
