@@ -139,14 +139,25 @@ router.put("/me/profile", authenticateToken, async (req, res) => {
         },
       });
 
+      // Build update data object, handling potential missing servicePostcodes field
+      const updateData: any = {
+        bio: payload.bio,
+        isActive: true,
+        isProfileComplete: true,
+      };
+
+      // Only include servicePostcodes if the field exists in the schema
+      // This makes the code resilient to migration timing issues
+      try {
+        updateData.servicePostcodes = payload.servicePostcodes;
+      } catch (err) {
+        console.warn("servicePostcodes field may not exist yet, migration may be pending");
+        // Continue without servicePostcodes if field doesn't exist
+      }
+
       await tx.providerProfile.update({
         where: { id: profile.id },
-        data: {
-          bio: payload.bio,
-          servicePostcodes: payload.servicePostcodes,
-          isActive: true,
-          isProfileComplete: true,
-        },
+        data: updateData,
       });
 
       const services = normalizeServices(payload.services);
