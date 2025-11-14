@@ -75,7 +75,7 @@ const sendViaResendAPI = async ({ to, subject, html, text }: SendEmailPayload): 
     throw new Error(`Resend API error: ${response.status} - ${error}`);
   }
 
-  const data = await response.json();
+  const data = await response.json() as { id: string };
   console.log(`✅ Email sent via Resend HTTP API to ${to} (ID: ${data.id})`);
 };
 
