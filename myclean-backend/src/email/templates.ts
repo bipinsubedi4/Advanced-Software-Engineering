@@ -273,63 +273,103 @@ const bookingSummaryText = (payload: BaseBookingPayload): string => {
 
 const templateDefinitions: Record<EmailTemplate, TemplateDefinition<any>> = {
   WELCOME: {
-    subject: ({ userName }) => `Welcome to ${BRAND_NAME}, ${userName}!`,
+    subject: ({ userName }) => `Welcome to ${BRAND_NAME}! Let's make your first booking ✨`,
     preview: () => `You're ready to start with ${BRAND_NAME}`,
-    build: ({ userName, role }) => ({
-      title: `Welcome, ${userName}!`,
-      previewText: `Your ${BRAND_NAME} account is ready.`,
-      intro: `Thanks for joining ${BRAND_NAME}. We're excited to help ${
-        role === "PROVIDER" ? "grow your cleaning business" : "you keep life sparkling clean"
-      }.`,
-      sections: [
-        role === "PROVIDER"
-          ? "Finish your profile and add services so customers can book you in minutes."
-          : "Browse vetted professionals, compare services, and book the perfect cleaning plan.",
-        "Need a hand? Our support team is always one message away.",
-      ],
-      cta: {
-        label: "Open dashboard",
-        url: role === "PROVIDER" ? `${APP_BASE_URL}/provider/dashboard` : `${APP_BASE_URL}/customer/dashboard`,
-      },
-      footerNote: "Keep this email for your records.",
-    }),
-    text: ({ userName, role }) =>
-      `Hi ${userName},\n\nWelcome to ${BRAND_NAME}! ${
-        role === "PROVIDER" ? "Set up your profile to start receiving bookings." : "You can now request cleanings whenever you need them."
-      }\n\nLog in: ${APP_BASE_URL}\n\nNeed help? Contact ${SUPPORT_EMAIL}.\n\n— The ${BRAND_NAME} team`,
+    build: ({ userName, role }) => {
+      // Extract first name from full name
+      const firstName = userName.split(" ")[0];
+      
+      if (role === "CUSTOMER") {
+        return {
+          title: `Welcome, ${firstName}!`,
+          previewText: `Your ${BRAND_NAME} account is ready.`,
+          intro: `Welcome to ${BRAND_NAME} — your trusted platform for booking reliable cleaning services!`,
+          sections: [
+            "You can start by finding local cleaning professionals and booking services that fit your schedule.",
+            "We're glad to have you on board!",
+          ],
+          cta: {
+            label: "Find a Cleaner",
+            url: `${APP_BASE_URL}/search`,
+          },
+          footerNote: "Thank you for choosing MyClean. We look forward to serving you!",
+        };
+      } else {
+        // Provider welcome email
+        return {
+          title: `Welcome, ${firstName}!`,
+          previewText: `Your ${BRAND_NAME} account is ready.`,
+          intro: `Thanks for joining ${BRAND_NAME}. We're excited to help you grow your cleaning business.`,
+          sections: [
+            "Finish your profile and add services so customers can book you in minutes.",
+            "Need a hand? Our support team is always one message away.",
+          ],
+          cta: {
+            label: "Complete Your Profile",
+            url: `${APP_BASE_URL}/provider/dashboard`,
+          },
+          footerNote: "Keep this email for your records.",
+        };
+      }
+    },
+    text: ({ userName, role }) => {
+      const firstName = userName.split(" ")[0];
+      if (role === "CUSTOMER") {
+        return `Hi ${firstName},\n\nWelcome to ${BRAND_NAME} — your trusted platform for booking reliable cleaning services!\n\nYou can start by finding local cleaning professionals here:\n👉 ${APP_BASE_URL}/search\n\nWe're glad to have you on board!\n\n— The ${BRAND_NAME} Team`;
+      } else {
+        return `Hi ${firstName},\n\nWelcome to ${BRAND_NAME}! Set up your profile to start receiving bookings.\n\nLog in: ${APP_BASE_URL}/provider/dashboard\n\nNeed help? Contact ${SUPPORT_EMAIL}.\n\n— The ${BRAND_NAME} team`;
+      }
+    },
   },
   BOOKING_CONFIRM_CUSTOMER: {
-    subject: ({ providerName, serviceName }) => `Booking received: ${serviceName} with ${providerName}`,
+    subject: () => `Your ${BRAND_NAME} Booking is Confirmed! 🧼`,
     preview: ({ bookingDateISO, startTime }) => {
       const schedule = formatSchedule({ bookingDateISO, startTime, endTime: startTime });
-      return `Requested for ${schedule.dateLabel}`;
+      return `Scheduled for ${schedule.dateLabel}`;
     },
-    build: (payload) => ({
-      title: "Your booking request is in!",
-      previewText: `We notified ${payload.providerName} about your request.`,
-      intro: `Thanks ${payload.customerName}! We let ${payload.providerName} know you're interested in ${payload.serviceName}.`,
-      detailRows: [
-        ...getBookingRows(payload),
-        { label: "Cleaner", value: payload.providerName },
-        { label: "Booking #", value: `#${payload.bookingId}` },
-        { label: "Total", value: formatCurrency(payload.totalPriceCents) },
-      ],
-      sections: [
-        "We'll send a confirmation as soon as your provider accepts. You can make changes or cancel anytime from your dashboard.",
-      ],
-      highlight: `Status: ${payload.bookingStatus}`,
-      cta: {
-        label: "View booking",
-        url: `${APP_BASE_URL}/my-bookings?bookingId=${payload.bookingId}`,
-      },
-      footerNote: "Keep this confirmation for your records.",
-    }),
-    text: (payload) =>
-      `Hi ${payload.customerName},\n\nWe received your ${payload.serviceName} request with ${payload.providerName}.\n${bookingSummaryText(
-        payload
-      )}\nTotal: ${formatCurrency(payload.totalPriceCents)}\nStatus: ${payload.bookingStatus}\n\nManage booking: ${
-        APP_BASE_URL
-      }/my-bookings?bookingId=${payload.bookingId}\n\nThanks,\n${BRAND_NAME}`,
+    build: (payload) => {
+      const firstName = payload.customerName.split(" ")[0];
+      const schedule = formatSchedule({
+        bookingDateISO: payload.bookingDateISO,
+        startTime: payload.startTime,
+        endTime: payload.endTime,
+        timezone: payload.timezone,
+      });
+      
+      return {
+        title: "Your cleaning booking is confirmed! 🎉",
+        previewText: `Scheduled with ${payload.providerName}`,
+        intro: `Hi ${firstName},\n\nYour cleaning booking is confirmed! 🎉\n\nHere are the details:`,
+        detailRows: [
+          { label: "Cleaner", value: payload.providerName },
+          { label: "Service", value: payload.serviceName },
+          { label: "Date", value: schedule.dateLabel },
+          { label: "Time", value: schedule.timeLabel },
+          { label: "Price", value: formatCurrency(payload.totalPriceCents) },
+          { label: "Location", value: formatAddress(payload) },
+          { label: "Booking ID", value: `#${payload.bookingId}` },
+        ],
+        sections: [
+          "Thank you for choosing MyClean!",
+          "We'll send a reminder before your scheduled time.",
+        ],
+        cta: {
+          label: "View Booking Details",
+          url: `${APP_BASE_URL}/my-bookings?bookingId=${payload.bookingId}`,
+        },
+        footerNote: "Keep this confirmation for your records.",
+      };
+    },
+    text: (payload) => {
+      const firstName = payload.customerName.split(" ")[0];
+      const schedule = formatSchedule({
+        bookingDateISO: payload.bookingDateISO,
+        startTime: payload.startTime,
+        endTime: payload.endTime,
+        timezone: payload.timezone,
+      });
+      return `Hi ${firstName},\n\nYour cleaning booking is confirmed! 🎉\n\nHere are the details:\n\n- Cleaner: ${payload.providerName}\n- Service: ${payload.serviceName}\n- Date & Time: ${schedule.dateLabel} at ${schedule.timeLabel}\n- Price: ${formatCurrency(payload.totalPriceCents)}\n\nThank you for choosing ${BRAND_NAME}!\n\nWe'll send a reminder before your scheduled time.\n\n— The ${BRAND_NAME} Team\n\nView booking: ${APP_BASE_URL}/my-bookings?bookingId=${payload.bookingId}`;
+    },
   },
   BOOKING_CONFIRM_PROVIDER: {
     subject: ({ customerName }) => `New booking request from ${customerName}`,

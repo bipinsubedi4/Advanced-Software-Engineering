@@ -264,6 +264,12 @@ export const queueWelcomeEmail = async ({
     return;
   }
 
+  // Only send welcome email to customers with @gmail.com addresses
+  if (role === "CUSTOMER" && !email.toLowerCase().endsWith("@gmail.com")) {
+    console.log(`Skipping welcome email for ${email} - not a Gmail address`);
+    return;
+  }
+
   await queueEmail({
     to: email,
     template: EmailTemplate.WELCOME,
