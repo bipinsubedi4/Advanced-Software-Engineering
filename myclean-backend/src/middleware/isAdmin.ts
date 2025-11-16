@@ -17,9 +17,10 @@ export const requireAdmin = async (req: Request, res: Response, next: NextFuncti
     }
 
     const isRoleAdmin = dbUser.role === "ADMIN";
-    const isAllowedEmail = ADMIN_EMAIL ? dbUser.email === ADMIN_EMAIL : true;
+    const emailMatchesAdmin = ADMIN_EMAIL ? dbUser.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase() : false;
+    const hasAdminAccess = isRoleAdmin || emailMatchesAdmin;
 
-    if (!isRoleAdmin || !isAllowedEmail) {
+    if (!hasAdminAccess) {
       return res.status(403).json({ error: "Forbidden: Admin access required" });
     }
 
