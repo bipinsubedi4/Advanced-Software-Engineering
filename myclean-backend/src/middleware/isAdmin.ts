@@ -5,11 +5,6 @@ import { AuthRequest } from "../middleware";
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL;
 
 export const requireAdmin = async (req: Request, res: Response, next: NextFunction) => {
-  if (!ADMIN_EMAIL) {
-    console.error("ADMIN_EMAIL is not configured.");
-    return res.status(500).json({ error: "Admin access is not configured" });
-  }
-
   const authReq = req as AuthRequest;
   if (!authReq.user) {
     return res.status(401).json({ error: "Unauthorized" });
@@ -17,7 +12,14 @@ export const requireAdmin = async (req: Request, res: Response, next: NextFuncti
 
   try {
     const dbUser = await prisma.user.findUnique({ where: { id: authReq.user.sub } });
-    if (!dbUser || dbUser.email !== ADMIN_EMAIL) {
+    if (!dbUser) {
+      return res.status(403).json({ error: "Forbidden: Admin access required" });
+    }
+
+    const isRoleAdmin = dbUser.role === "ADMIN";
+    const isAllowedEmail = ADMIN_EMAIL ? dbUser.email === ADMIN_EMAIL : true;
+
+    if (!isRoleAdmin || !isAllowedEmail) {
       return res.status(403).json({ error: "Forbidden: Admin access required" });
     }
 
