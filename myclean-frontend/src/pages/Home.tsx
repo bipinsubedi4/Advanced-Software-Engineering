@@ -1,8 +1,15 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, Navigate } from 'react-router-dom';
 import { FaSearch, FaCalendar, FaShieldAlt, FaDollarSign, FaStar, FaCheckCircle } from 'react-icons/fa';
+import { useAuth } from '../context/AuthContext';
 
 const Home: React.FC = () => {
+  const { user } = useAuth();
+
+  if (user?.role === 'PROVIDER') {
+    return <Navigate to="/provider/home" replace />;
+  }
+
   return (
     <div className="min-h-screen bg-white">
       {/* Hero Section */}
@@ -226,4 +233,3 @@ const Home: React.FC = () => {
 };
 
 export default Home;
-
