@@ -19,17 +19,9 @@ const normalizeCompletedStatus = () => ["COMPLETED", "completed"];
 
 adminRouter.post("/login", async (req: Request<unknown, unknown, LoginBody>, res: Response) => {
   try {
-    if (!ADMIN_EMAIL) {
-      return res.status(500).json({ error: "ADMIN_EMAIL is not configured" });
-    }
-
     const { email, password } = req.body;
     if (!email || !password) {
       return res.status(400).json({ error: "Email and password are required" });
-    }
-
-    if (email.toLowerCase() !== ADMIN_EMAIL.toLowerCase()) {
-      return res.status(403).json({ error: "Forbidden" });
     }
 
     const adminUser = await prisma.user.findUnique({ where: { email } });
@@ -42,8 +34,18 @@ adminRouter.post("/login", async (req: Request<unknown, unknown, LoginBody>, res
       return res.status(401).json({ error: "Invalid credentials" });
     }
 
+    const normalizedRole = adminUser.role?.toUpperCase() ?? "";
+    const roleIsAdmin = normalizedRole === "ADMIN";
+    const emailMatchesAdmin = ADMIN_EMAIL
+      ? adminUser.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase()
+      : false;
+
+    if (!roleIsAdmin && !emailMatchesAdmin) {
+      return res.status(403).json({ error: "Forbidden" });
+    }
+
     const token = jwt.sign(
-      { sub: adminUser.id, role: adminUser.role, email: adminUser.email, scope: "admin" },
+      { sub: adminUser.id, role: normalizedRole || adminUser.role, email: adminUser.email, scope: "admin" },
       JWT_SECRET,
       { expiresIn: "8h" }
     );
@@ -54,7 +56,7 @@ adminRouter.post("/login", async (req: Request<unknown, unknown, LoginBody>, res
         id: adminUser.id,
         email: adminUser.email,
         name: adminUser.name,
-        role: adminUser.role,
+        role: normalizedRole || adminUser.role,
       },
     });
   } catch (error) {

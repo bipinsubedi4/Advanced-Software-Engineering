@@ -5,6 +5,7 @@ import { prisma } from "./prisma";
 export interface AuthUser {
   sub: number;
   role: string;
+  email?: string;
 }
 
 export interface AuthRequest extends Request {
@@ -31,6 +32,7 @@ export function authenticateToken(
     (req as AuthRequest).user = {
       sub: Number(payload.sub),
       role: (payload as JwtPayload).role as string,
+      email: (payload as JwtPayload).email as string | undefined,
     };
     next();
   } catch {
