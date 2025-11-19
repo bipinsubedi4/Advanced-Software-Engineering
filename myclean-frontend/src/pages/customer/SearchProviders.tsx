@@ -1,11 +1,10 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { FaMapMarkerAlt, FaStar, FaShieldAlt } from "react-icons/fa";
 import Card from "../../components/Card";
 import FilterSidebar, { FilterState } from "../../components/search/FilterSidebar";
 import SortDropdown from "../../components/search/SortDropdown";
-import MapPreview from "../../components/search/MapPreview";
 import { buildApiUrl } from "../../Services/api";
 
 const SERVICE_OPTIONS = ["Deep Clean", "Standard Clean", "Move-out Clean", "Oven Cleaning", "Window Washing", "Carpet Cleaning"];
@@ -16,23 +15,19 @@ interface CleanerResult {
   bio: string;
   city: string; // Deprecated
   state: string; // Deprecated
-  serviceRadius: number; // Deprecated
-  serviceSuburbs?: string[]; // New: Array of "Suburb (Postcode)"
+  serviceSuburbs?: string[]; // Array of "Suburb (Postcode)"
   averageRating: number;
   totalReviews: number;
   minPrice: number | null;
   maxPrice: number | null;
   services: Array<{ id: number; serviceName: string; pricePerHour: number; durationMin: number }>;
-  distanceKm: number | null;
   profileImage: string | null;
-  latitude?: number | null;
-  longitude?: number | null;
 }
 
 const INITIAL_FILTERS: FilterState = {
   priceRange: [0, 250],
   minRating: 0,
-  radiusInKm: 20,
+  radiusInKm: 20, // Not used anymore but kept for FilterState compatibility
   selectedServices: [],
   date: null,
   postcode: "",
@@ -46,7 +41,6 @@ const SearchProviders: React.FC = () => {
   const [cleaners, setCleaners] = useState<CleanerResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [clientLocation, setClientLocation] = useState<{ lat: number | null; lng: number | null }>({ lat: null, lng: null });
 
   const fetchCleaners = useCallback(async () => {
     try {
@@ -75,12 +69,6 @@ const SearchProviders: React.FC = () => {
         params.postcode = filters.postcode.trim();
       }
 
-      if (clientLocation.lat != null && clientLocation.lng != null) {
-        params.lat = clientLocation.lat;
-        params.lng = clientLocation.lng;
-        params.radiusInKm = filters.radiusInKm;
-      }
-
       const response = await axios.get<{ providers: CleanerResult[] }>(buildApiUrl("/api/cleaners/search"), {
         params,
         withCredentials: true,
@@ -92,7 +80,7 @@ const SearchProviders: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [filters, sortBy, clientLocation]);
+  }, [filters, sortBy]);
 
   useEffect(() => {
     void fetchCleaners();
@@ -105,35 +93,6 @@ const SearchProviders: React.FC = () => {
   const handleResetFilters = () => {
     setFilters(INITIAL_FILTERS);
   };
-
-  const requestLocation = () => {
-    if (!navigator.geolocation) {
-      setError("Geolocation is not supported by your browser.");
-      return;
-    }
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        setClientLocation({
-          lat: Number(position.coords.latitude.toFixed(6)),
-          lng: Number(position.coords.longitude.toFixed(6)),
-        });
-      },
-      () => setError("Unable to retrieve your location."),
-      { enableHighAccuracy: true }
-    );
-  };
-
-  const mapLocations = useMemo(
-    () =>
-      cleaners
-        .map((cleaner) => ({
-          id: cleaner.id,
-          lat: cleaner.latitude ?? null,
-          lng: cleaner.longitude ?? null,
-        }))
-        .filter((location) => location.lat != null && location.lng != null),
-    [cleaners]
-  );
 
   return (
     <div className="min-h-screen bg-gray-50 py-10">
@@ -175,15 +134,6 @@ const SearchProviders: React.FC = () => {
                 {filters.selectedServices.length > 0 && filters.suburb && 
                   ` · Services: ${filters.selectedServices.join(", ")}`}
               </div>
-              <div className="flex items-center gap-3">
-                <button
-                  type="button"
-                  onClick={requestLocation}
-                  className="inline-flex items-center text-sm text-indigo-600 hover:text-indigo-800 font-medium"
-                >
-                  <FaMapMarkerAlt className="mr-1" /> Use my location
-                </button>
-              </div>
             </div>
 
             {error && <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl p-4">{error}</div>}
@@ -215,12 +165,6 @@ const SearchProviders: React.FC = () => {
                       <div className="flex-1 space-y-3">
                         <div className="flex flex-wrap items-center gap-3">
                           <h2 className="text-xl font-semibold text-gray-900">{cleaner.name}</h2>
-                          {cleaner.distanceKm != null && (
-                            <span className="text-sm text-gray-500 flex items-center">
-                              <FaMapMarkerAlt className="mr-1 text-indigo-500" />
-                              {cleaner.distanceKm.toFixed(1)} km away
-                            </span>
-                          )}
                           <span className="flex items-center text-sm font-medium text-yellow-500">
                             <FaStar className="mr-1" />
                             {cleaner.averageRating?.toFixed(1) ?? "New"} ({cleaner.totalReviews ?? 0})
@@ -278,8 +222,6 @@ const SearchProviders: React.FC = () => {
                 ))}
               </div>
             )}
-
-            <MapPreview locations={mapLocations} center={clientLocation.lat && clientLocation.lng ? { lat: clientLocation.lat, lng: clientLocation.lng } : null} />
           </div>
         </div>
       </div>
