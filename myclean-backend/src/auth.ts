@@ -47,51 +47,9 @@ router.post("/register", async (req, res) => {
   const { name, email, password, role } = parsed.data;
 
   // Check if user already exists
-  const existing = await prisma.user.findUnique({
-    where: { email },
-    include: { providerProfile: true },
-  });
-
+  const existing = await prisma.user.findUnique({ where: { email } });
   if (existing) {
-    if (existing.role === role) {
-      return res.status(409).json({ error: "Email already in use" });
-    }
-
-    const passwordMatches = await bcrypt.compare(password, existing.passwordHash);
-    if (!passwordMatches) {
-      return res.status(409).json({ error: "Email already in use" });
-    }
-
-    if (role === "PROVIDER" && existing.role === "CUSTOMER") {
-      const updatedUser = await prisma.user.update({
-        where: { id: existing.id },
-        data: { role: "PROVIDER" },
-      });
-
-      if (!existing.providerProfile) {
-        await createProviderProfileSkeleton(updatedUser.id);
-      }
-
-      const upgradeToken = jwt.sign({ sub: updatedUser.id, role: updatedUser.role }, JWT_SECRET, {
-        expiresIn: "7d",
-      });
-
-      return res.status(200).json({
-        token: upgradeToken,
-        user: { id: updatedUser.id, email: updatedUser.email, name: updatedUser.name, role: updatedUser.role },
-        message: "Account upgraded to provider using your existing email.",
-      });
-    }
-
-    const existingToken = jwt.sign({ sub: existing.id, role: existing.role }, JWT_SECRET, {
-      expiresIn: "7d",
-    });
-
-    return res.status(200).json({
-      token: existingToken,
-      user: { id: existing.id, email: existing.email, name: existing.name, role: existing.role },
-      message: "Account already exists. Logged you in instead.",
-    });
+    return res.status(409).json({ error: "Email already in use" });
   }
 
   // Hash password and create user

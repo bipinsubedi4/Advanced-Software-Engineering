@@ -10,28 +10,6 @@ interface ProtectedRouteProps {
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowedRoles }) => {
   const { user, loading } = useAuth();
 
-  const hasAccess = (userRole: string, roles?: string[]) => {
-    if (!roles || roles.length === 0) {
-      return true;
-    }
-
-    if (roles.includes(userRole)) {
-      return true;
-    }
-
-    if (userRole === 'PROVIDER' && roles.includes('CUSTOMER')) {
-      // Providers can also act as customers (book services)
-      return true;
-    }
-
-    if (userRole === 'ADMIN') {
-      // Admin accounts should be able to view all routes
-      return true;
-    }
-
-    return false;
-  };
-
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -44,7 +22,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowedRoles 
     return <Navigate to="/login" replace />;
   }
 
-  if (!hasAccess(user.role, allowedRoles)) {
+  if (allowedRoles && !allowedRoles.includes(user.role)) {
     return <Navigate to="/dashboard" replace />;
   }
 
