@@ -1,5 +1,4 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import Card from "../../components/Card";
 import { useAuth } from "../../context/AuthContext";
@@ -61,9 +60,8 @@ const dedupeServices = (services: WizardServiceSelection[]): WizardServiceSelect
 };
 
 const ProfileWizard: React.FC = () => {
-  const navigate = useNavigate();
   const { user, token } = useAuth();
-  const { profile, profileComplete, loading: profileLoading, refetch, markProfileComplete } = useProviderProfile();
+  const { profile, profileComplete, loading: profileLoading, refetch } = useProviderProfile();
 
   const [formData, setFormData] = useState<ProfileWizardState>(initialState);
   const [currentStep, setCurrentStep] = useState(0);
@@ -208,14 +206,11 @@ const ProfileWizard: React.FC = () => {
       await axios.put(`${API_BASE}/api/cleaners/me/profile`, preparePayload(), {
         headers: { Authorization: `Bearer ${token}` },
       });
-      markProfileComplete(true);
-      refetch().catch((error) => {
-        console.error("Profile refetch after completion failed", error);
-      });
+      await refetch();
       const message = "Profile completed! Redirecting to your home page...";
       setSuccessMessage(message);
       setTimeout(() => {
-        navigate("/provider/home", { replace: true });
+        window.location.href = "/provider/home";
       }, 1500);
     } catch (err: any) {
       console.error("Profile completion failed", err);
