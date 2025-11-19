@@ -16,55 +16,54 @@ code {
     monospace;
 }
 
-/* Gradient Logo Style */
-.gradient-logo {
-  background: linear-gradient(to right, #5046E5, #EA489A);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  color: transparent;
+/* Logo Styles - Role-based solid colors */
+.logo-customer {
+  color: #295DE7;
 }
 
-/* Gradient Border Menu Item */
-.gradient-menu-item {
+.logo-provider {
+  color: #EA489A;
+}
+
+.logo-default {
+  color: #295DE7; /* Default to customer color for public pages */
+}
+
+/* Menu Item Styles - Role-based solid colors with capsule borders */
+.menu-item-customer {
   position: relative;
-  border-radius: 9999px;
-  transition: all 0.2s ease;
+  border-radius: 20px;
   border: 2px solid transparent;
+  transition: all 0.2s ease;
 }
 
-.gradient-menu-item::before {
-  content: '';
-  position: absolute;
-  inset: -2px;
-  border-radius: 9999px;
-  padding: 2px;
-  background: linear-gradient(to right, #5046E5, #EA489A);
-  -webkit-mask: 
-    linear-gradient(#fff 0 0) content-box, 
-    linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-  mask: 
-    linear-gradient(#fff 0 0) content-box, 
-    linear-gradient(#fff 0 0);
-  mask-composite: exclude;
-  opacity: 0;
-  transition: opacity 0.2s ease;
-  pointer-events: none;
-  z-index: -1;
+.menu-item-customer:hover {
+  border-color: #295DE7;
+  background-color: rgba(41, 93, 231, 0.1); /* 10% opacity */
 }
 
-.gradient-menu-item:hover::before {
-  opacity: 1;
-}
-
-.gradient-menu-item.active {
-  background: linear-gradient(to right, #5046E5, #EA489A);
+.menu-item-customer.active {
+  background-color: #295DE7;
   color: white;
   font-weight: bold;
-  border: 2px solid transparent;
+  border-color: #295DE7;
 }
 
-.gradient-menu-item.active::before {
-  display: none;
+.menu-item-provider {
+  position: relative;
+  border-radius: 20px;
+  border: 2px solid transparent;
+  transition: all 0.2s ease;
+}
+
+.menu-item-provider:hover {
+  border-color: #EA489A;
+  background-color: rgba(234, 72, 154, 0.1); /* 10% opacity */
+}
+
+.menu-item-provider.active {
+  background-color: #EA489A;
+  color: white;
+  font-weight: bold;
+  border-color: #EA489A;
 }

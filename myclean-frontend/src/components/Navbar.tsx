@@ -108,16 +108,27 @@ const Navbar: React.FC = () => {
     return '/';
   };
 
+  // Determine theme color based on user role
+  const getThemeColor = () => {
+    if (user?.role === 'PROVIDER') {
+      return 'provider';
+    }
+    return 'customer'; // Default to customer for public pages and customers
+  };
+
+  const theme = getThemeColor();
+  const isProvider = theme === 'provider';
+
   // Check if a route is active
   const isActiveRoute = (path: string) => {
     return location.pathname === path || location.pathname.startsWith(path + '/');
   };
 
-  // Menu item class with gradient border
+  // Menu item class with solid color border based on role
   const getMenuItemClass = (path: string, isMobile = false) => {
     const baseClass = isMobile 
-      ? "gradient-menu-item block px-4 py-2 text-base font-medium"
-      : "gradient-menu-item px-4 py-2 text-sm font-medium";
+      ? `menu-item-${theme} block px-4 py-2 text-base font-medium`
+      : `menu-item-${theme} px-4 py-2 text-sm font-medium`;
     
     const isActive = isActiveRoute(path);
     
@@ -125,7 +136,15 @@ const Navbar: React.FC = () => {
       return `${baseClass} active`;
     }
     
-    return `${baseClass} text-gray-700 hover:text-gray-900 hover:bg-gradient-to-r hover:from-[#5046E5]/10 hover:to-[#EA489A]/10`;
+    return `${baseClass} text-gray-700 hover:text-gray-900`;
+  };
+
+  // Logo class based on role
+  const getLogoClass = () => {
+    if (user?.role === 'PROVIDER') {
+      return 'logo-provider';
+    }
+    return 'logo-customer'; // Default to customer for public pages
   };
 
   return (
@@ -134,7 +153,7 @@ const Navbar: React.FC = () => {
         <div className="flex justify-between h-16">
           <div className="flex items-center">
             <Link to={getHomeRoute()} className="flex-shrink-0 flex items-center">
-              <span className="text-2xl font-bold gradient-logo">
+              <span className={`text-2xl font-bold ${getLogoClass()}`}>
                 MyClean
               </span>
             </Link>
@@ -259,7 +278,7 @@ const Navbar: React.FC = () => {
                   )}
                   <button
                     onClick={handleLogout}
-                    className="bg-red-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-red-700 flex items-center"
+                    className="bg-red-600 text-white px-4 py-2 rounded-[20px] text-sm font-medium hover:bg-red-700 flex items-center transition-all duration-200"
                   >
                     <FaSignOutAlt className="mr-2" /> Logout
                   </button>
@@ -343,7 +362,7 @@ const Navbar: React.FC = () => {
                 )}
                 <button
                   onClick={handleLogout}
-                  className="block w-full text-left text-red-600 hover:bg-red-50 px-3 py-2 rounded-md text-base font-medium"
+                  className="block w-full text-left bg-red-600 text-white hover:bg-red-700 px-4 py-2 rounded-[20px] text-base font-medium transition-all duration-200"
                 >
                   Logout
                 </button>
