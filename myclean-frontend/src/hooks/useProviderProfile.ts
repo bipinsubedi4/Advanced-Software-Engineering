@@ -58,5 +58,9 @@ export const useProviderProfile = () => {
     });
   }, [fetchProfile]);
 
-  return { profileComplete, profile, loading, refetch: fetchProfile };
+  const markProfileComplete = useCallback((value: boolean) => {
+    setProfileComplete(value);
+  }, []);
+
+  return { profileComplete, profile, loading, refetch: fetchProfile, markProfileComplete };
 };
