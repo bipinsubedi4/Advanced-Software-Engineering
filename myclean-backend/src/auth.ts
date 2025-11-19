@@ -8,6 +8,31 @@ import { queueWelcomeEmail } from "./email/emailService";
 const router = Router();
 const JWT_SECRET = process.env.JWT_SECRET || "dev-secret";
 
+const createProviderProfileSkeleton = async (userId: number) => {
+  await prisma.providerProfile.create({
+    data: {
+      userId,
+      bio: "",
+      yearsExperience: "0",
+      hasInsurance: false,
+      hasVehicle: false,
+      hasEquipment: false,
+      certifications: "",
+      address: "",
+      city: "",
+      state: "",
+      zipCode: "",
+      serviceRadius: 10,
+      isVerified: true,
+      isActive: true,
+      isProfileComplete: false,
+      averageRating: 0,
+      totalReviews: 0,
+      totalBookings: 0,
+    },
+  });
+};
+
 // Schema for user registration
 const registerSchema = z.object({
   name: z.string().min(1),
@@ -24,8 +49,58 @@ router.post("/register", async (req, res) => {
   const { name, email, password, role } = parsed.data;
 
   // Check if user already exists
-  const existing = await prisma.user.findUnique({ where: { email } });
-  if (existing) return res.status(409).json({ error: "Email already in use" });
+  const existing = await prisma.user.findUnique({
+    where: { email },
+    include: { providerProfile: true },
+  });
+
+  if (existing) {
+    if (existing.role === role) {
+      return res.status(409).json({ error: "Email already in use" });
+    }
+
+    const passwordMatches = await bcrypt.compare(password, existing.passwordHash);
+    if (!passwordMatches) {
+      return res.status(409).json({ error: "Email already in use" });
+    }
+
+    if (role === "PROVIDER" && existing.role === "CUSTOMER") {
+      const updatedUser = await prisma.user.update({
+        where: { id: existing.id },
+        data: { role: "PROVIDER" },
+      });
+
+      if (!existing.providerProfile) {
+        await createProviderProfileSkeleton(updatedUser.id);
+      }
+
+      try {
+        await queueWelcomeEmail({ email: updatedUser.email, name: updatedUser.name, role: updatedUser.role });
+      } catch (emailError) {
+        console.error("Failed to queue welcome email", emailError);
+      }
+
+      const upgradeToken = jwt.sign({ sub: updatedUser.id, role: updatedUser.role }, JWT_SECRET, {
+        expiresIn: "7d",
+      });
+
+      return res.status(200).json({
+        token: upgradeToken,
+        user: { id: updatedUser.id, email: updatedUser.email, name: updatedUser.name, role: updatedUser.role },
+        message: "Account upgraded to provider using your existing email.",
+      });
+    }
+
+    const existingToken = jwt.sign({ sub: existing.id, role: existing.role }, JWT_SECRET, {
+      expiresIn: "7d",
+    });
+
+    return res.status(200).json({
+      token: existingToken,
+      user: { id: existing.id, email: existing.email, name: existing.name, role: existing.role },
+      message: "Account already exists. Logged you in instead.",
+    });
+  }
 
   // Hash password and create user
   const passwordHash = await bcrypt.hash(password, 10);
@@ -34,28 +109,7 @@ router.post("/register", async (req, res) => {
   });
 
   if (user.role === "PROVIDER") {
-    await prisma.providerProfile.create({
-      data: {
-        userId: user.id,
-        bio: "",
-        yearsExperience: "0",
-        hasInsurance: false,
-        hasVehicle: false,
-        hasEquipment: false,
-        certifications: "",
-        address: "",
-        city: "",
-        state: "",
-        zipCode: "",
-        serviceRadius: 10,
-        isVerified: true,
-        isActive: true,
-        isProfileComplete: false,
-        averageRating: 0,
-        totalReviews: 0,
-        totalBookings: 0,
-      },
-    });
+    await createProviderProfileSkeleton(user.id);
   }
 
 

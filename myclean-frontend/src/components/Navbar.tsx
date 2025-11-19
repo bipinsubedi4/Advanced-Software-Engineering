@@ -66,6 +66,9 @@ const Navbar: React.FC = () => {
     navigate('/login');
   };
 
+  const showCustomerLinks = !!user && (user.role === 'CUSTOMER' || user.role === 'PROVIDER');
+  const showProviderLinks = user?.role === 'PROVIDER';
+
   // Determine home route based on user role
   const getHomeRoute = () => {
     if (user?.role === 'PROVIDER') {
@@ -88,13 +91,13 @@ const Navbar: React.FC = () => {
           <div className="hidden md:flex items-center space-x-4">
             {user ? (
               <>
-                {user.role === 'CUSTOMER' && (
+                {showCustomerLinks && (
                   <>
                     <Link to="/search" className="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium">
                       Find Cleaners
                     </Link>
                     <Link to="/marketplace" className="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium">
-                      Marketplace
+                      Customer Marketplace
                     </Link>
                     <Link to="/my-bookings" className="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium">
                       My Bookings
@@ -103,11 +106,11 @@ const Navbar: React.FC = () => {
                       to="/customer/messages"
                       className="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium"
                     >
-                      Messages
+                      Customer Messages
                     </Link>
                   </>
                 )}
-                {user.role === 'PROVIDER' && (
+                {showProviderLinks && (
                   <>
                     <Link to="/provider/home" className="text-gray-700 hover:text-indigo-600 px-3 py-2 rounded-md text-sm font-medium">
                       Home
@@ -188,7 +191,7 @@ const Navbar: React.FC = () => {
                     )}
                   </div>
                   
-                  {user.role === 'PROVIDER' ? (
+                  {showProviderLinks ? (
                     <Link 
                       to={profileComplete ? "/provider/profile" : "/provider/profile-setup"} 
                       className="text-gray-700 hover:text-indigo-600 px-3 py-2 rounded-md text-sm font-medium flex items-center"
@@ -239,13 +242,13 @@ const Navbar: React.FC = () => {
           <div className="px-2 pt-2 pb-3 space-y-1">
             {user ? (
               <>
-                {user.role === 'CUSTOMER' && (
+                {showCustomerLinks && (
                   <>
                     <Link to="/search" className="block text-gray-700 hover:bg-blue-50 px-3 py-2 rounded-md text-base font-medium">
                       Find Cleaners
                     </Link>
                     <Link to="/marketplace" className="block text-gray-700 hover:bg-blue-50 px-3 py-2 rounded-md text-base font-medium">
-                      Marketplace
+                      Customer Marketplace
                     </Link>
                     <Link to="/my-bookings" className="block text-gray-700 hover:bg-blue-50 px-3 py-2 rounded-md text-base font-medium">
                       My Bookings
@@ -254,11 +257,11 @@ const Navbar: React.FC = () => {
                       to="/customer/messages"
                       className="block text-gray-700 hover:bg-blue-50 px-3 py-2 rounded-md text-base font-medium"
                     >
-                      Messages
+                      Customer Messages
                     </Link>
                   </>
                 )}
-                {user.role === 'PROVIDER' && (
+                {showProviderLinks && (
                   <>
                     <Link to="/provider/home" className="block text-gray-700 hover:bg-blue-50 px-3 py-2 rounded-md text-base font-medium">
                       Home
@@ -277,7 +280,7 @@ const Navbar: React.FC = () => {
                     </Link>
                   </>
                 )}
-                {user.role === 'PROVIDER' && (
+                {showProviderLinks && (
                   <Link 
                     to={profileComplete ? "/provider/profile" : "/provider/profile-setup"} 
                     className="block text-gray-700 hover:bg-blue-50 px-3 py-2 rounded-md text-base font-medium"

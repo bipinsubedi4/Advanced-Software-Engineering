@@ -123,7 +123,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const isProvider = user?.role === 'PROVIDER';
-  const isCustomer = user?.role === 'CUSTOMER';
+  const isCustomer = user?.role === 'CUSTOMER' || user?.role === 'PROVIDER';
   const isAdmin = user?.role === 'ADMIN';
 
   const value = useMemo<AuthContextType>(
