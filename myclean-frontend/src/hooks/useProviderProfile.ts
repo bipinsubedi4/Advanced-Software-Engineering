@@ -17,21 +17,22 @@ export const useProviderProfile = () => {
   const [profile, setProfile] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchProfile = useCallback(async () => {
+  const fetchProfile = useCallback(async (): Promise<boolean | null> => {
     if (!isProvider || !user || !token) {
       setProfileComplete(null);
       setProfile(null);
       setLoading(false);
-      return;
+      return null;
     }
 
     setLoading(true);
+    let completionFlag = false;
     try {
       const response = await axios.get<CleanerProfileResponse>(`${API_BASE}/api/cleaners/me`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      const completionFlag =
+      completionFlag =
         response.data.isProfileComplete ??
         response.data.profileComplete ??
         response.data.profile?.isProfileComplete ??
@@ -44,9 +45,11 @@ export const useProviderProfile = () => {
       console.error('Error checking profile:', error);
       setProfileComplete(false);
       setProfile(null);
+      completionFlag = false;
     } finally {
       setLoading(false);
     }
+    return completionFlag;
   }, [isProvider, user, token]);
 
   useEffect(() => {

@@ -71,6 +71,7 @@ const ProfileWizard: React.FC = () => {
   const [prefilled, setPrefilled] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [photoUploading, setPhotoUploading] = useState(false);
   const [photoError, setPhotoError] = useState<string | null>(null);
 
@@ -207,8 +208,14 @@ const ProfileWizard: React.FC = () => {
       await axios.put(`${API_BASE}/api/cleaners/me/profile`, preparePayload(), {
         headers: { Authorization: `Bearer ${token}` },
       });
-      await refetch();
-      navigate("/provider/home", { replace: true });
+      const completionFlag = await refetch();
+      const message = completionFlag
+        ? "Profile completed! Redirecting to your home page..."
+        : "Profile saved! Redirecting...";
+      setSuccessMessage(message);
+      setTimeout(() => {
+        navigate("/provider/home", { replace: true });
+      }, 1500);
     } catch (err: any) {
       console.error("Profile completion failed", err);
       setError(err?.response?.data?.error ?? "Unable to save profile");
@@ -300,6 +307,7 @@ const ProfileWizard: React.FC = () => {
             )}
 
             {error && <p className="text-sm text-red-600">{error}</p>}
+            {successMessage && <p className="text-sm text-green-600">{successMessage}</p>}
 
             <div className="flex items-center justify-between">
               {currentStep > 0 ? (
