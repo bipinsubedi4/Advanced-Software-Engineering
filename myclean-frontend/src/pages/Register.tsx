@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 const Register: React.FC = () => {
@@ -12,11 +12,18 @@ const Register: React.FC = () => {
   const [justRegistered, setJustRegistered] = useState(false);
   const { register, user } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   // Redirect after successful registration when user is set
   useEffect(() => {
     if (user && justRegistered) {
-      if (user.role === 'PROVIDER') {
+      // Check if there's a next URL parameter (from booking flow)
+      const nextUrl = searchParams.get('next');
+      
+      if (nextUrl) {
+        // Redirect to the provider they tried to book
+        navigate(nextUrl);
+      } else if (user.role === 'PROVIDER') {
         // New providers must complete their profile first
         navigate('/provider/profile-setup');
       } else if (user.role === 'CUSTOMER') {
@@ -25,7 +32,7 @@ const Register: React.FC = () => {
         navigate('/admin');
       }
     }
-  }, [user, justRegistered, navigate]);
+  }, [user, justRegistered, navigate, searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -152,7 +159,10 @@ const Register: React.FC = () => {
           <div className="text-center">
             <p className="text-sm text-gray-600">
               Already have an account?{' '}
-              <Link to="/login" className="font-medium text-blue-600 hover:text-blue-500">
+              <Link 
+                to={searchParams.get('next') ? `/login?next=${encodeURIComponent(searchParams.get('next')!)}` : '/login'} 
+                className="font-medium text-blue-600 hover:text-blue-500"
+              >
                 Sign in
               </Link>
             </p>

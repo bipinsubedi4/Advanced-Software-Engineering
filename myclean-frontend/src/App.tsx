@@ -49,23 +49,11 @@ function App() {
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
 
-            {/* Customer Routes - Providers CANNOT access these */}
-            <Route
-              path="/search"
-              element={
-                <ProtectedRoute allowedRoles={['CUSTOMER']}>
-                  <SearchProviders />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/provider/:id"
-              element={
-                <ProtectedRoute allowedRoles={['CUSTOMER']}>
-                  <ProviderProfile />
-                </ProtectedRoute>
-              }
-            />
+            {/* Public Routes - Browse cleaners without login */}
+            <Route path="/search" element={<SearchProviders />} />
+            <Route path="/provider/:id" element={<ProviderProfile />} />
+
+            {/* Customer Routes - Require login */}
             <Route
               path="/my-bookings"
               element={

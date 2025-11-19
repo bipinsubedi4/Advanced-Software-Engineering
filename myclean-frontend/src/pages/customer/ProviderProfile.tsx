@@ -170,7 +170,9 @@ const ProviderProfile: React.FC = () => {
 
   const handleBookService = (service: ServiceUI) => {
     if (!user) {
-      navigate('/login');
+      // Redirect to login with next param to remember which provider/service they wanted to book
+      const nextUrl = `/provider/${id}`;
+      navigate(`/login?next=${encodeURIComponent(nextUrl)}`);
       return;
     }
     if (user.role !== 'CUSTOMER') {
