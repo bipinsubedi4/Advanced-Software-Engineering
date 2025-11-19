@@ -16,13 +16,8 @@ export const useProviderProfile = () => {
   const [profileComplete, setProfileComplete] = useState<boolean | null>(null);
   const [profile, setProfile] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
-  const [refreshIndex, setRefreshIndex] = useState(0);
 
-  const refetch = useCallback(() => {
-    setRefreshIndex((index) => index + 1);
-  }, []);
-
-  useEffect(() => {
+  const fetchProfile = useCallback(async () => {
     if (!isProvider || !user || !token) {
       setProfileComplete(null);
       setProfile(null);
@@ -30,33 +25,35 @@ export const useProviderProfile = () => {
       return;
     }
 
-    const fetchProfile = async () => {
-      setLoading(true);
-      try {
-        const response = await axios.get<CleanerProfileResponse>(`${API_BASE}/api/cleaners/me`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+    setLoading(true);
+    try {
+      const response = await axios.get<CleanerProfileResponse>(`${API_BASE}/api/cleaners/me`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
-        const completionFlag =
-          response.data.isProfileComplete ??
-          response.data.profileComplete ??
-          response.data.profile?.isProfileComplete ??
-          response.data.profile?.profileComplete ??
-          false;
+      const completionFlag =
+        response.data.isProfileComplete ??
+        response.data.profileComplete ??
+        response.data.profile?.isProfileComplete ??
+        response.data.profile?.profileComplete ??
+        false;
 
-        setProfileComplete(completionFlag);
-        setProfile(response.data.profile ?? null);
-      } catch (error) {
-        console.error('Error checking profile:', error);
-        setProfileComplete(false);
-        setProfile(null);
-      } finally {
-        setLoading(false);
-      }
-    };
+      setProfileComplete(completionFlag);
+      setProfile(response.data.profile ?? null);
+    } catch (error) {
+      console.error('Error checking profile:', error);
+      setProfileComplete(false);
+      setProfile(null);
+    } finally {
+      setLoading(false);
+    }
+  }, [isProvider, user, token]);
 
-    fetchProfile();
-  }, [user, isProvider, token, refreshIndex]);
+  useEffect(() => {
+    fetchProfile().catch((error) => {
+      console.error('Failed to load provider profile', error);
+    });
+  }, [fetchProfile]);
 
-  return { profileComplete, profile, loading, refetch };
+  return { profileComplete, profile, loading, refetch: fetchProfile };
 };
