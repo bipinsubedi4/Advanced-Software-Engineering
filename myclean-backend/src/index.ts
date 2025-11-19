@@ -249,10 +249,10 @@ app.post("/api/messages", async (req: Request, res: Response) => {
     await prisma.notification.create({
       data: {
         userId: receiverId,
-        type: "NEW_MESSAGE",
+        type: "MESSAGE", // Use "MESSAGE" type for all message notifications
         title: "New Message",
         message: `${messageRecord.sender.name} sent you a message`,
-        link: redirectUrl,
+        link: redirectUrl, // Still include link for reference, but frontend will override for MESSAGE type
       },
     });
 

@@ -118,10 +118,10 @@ export function initializeSocket(httpServer: HTTPServer) {
         await prisma.notification.create({
           data: {
             userId: data.receiverId,
-            type: "NEW_MESSAGE",
+            type: "MESSAGE", // Use "MESSAGE" type for all message notifications
             title: "New Message",
             message: `${message.sender.name} sent you a message`,
-            link: redirectUrl,
+            link: redirectUrl, // Still include link for reference, but frontend will override for MESSAGE type
           },
         });
 

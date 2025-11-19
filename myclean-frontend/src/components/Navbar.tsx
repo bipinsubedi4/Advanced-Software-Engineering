@@ -8,7 +8,7 @@ import axios from 'axios';
 
 interface Notification {
   id: number;
-  type: string;
+  type: string; // "NEW_MESSAGE" | "MESSAGE" | "BOOKING_REQUEST" | "BOOKING_ACCEPTED" | etc.
   title: string;
   message: string;
   isRead: boolean;
@@ -76,8 +76,21 @@ const Navbar: React.FC = () => {
   const handleNotificationClick = (notification: Notification) => {
     markAsRead(notification.id);
     setShowNotifications(false);
-    // Use the link field from notification (which now contains proper redirect URLs)
-    const redirectUrl = notification.link || (user?.role === 'PROVIDER' ? '/provider/messages' : '/customer/messages');
+    
+    // FORCE all message notifications to redirect to /provider/messages
+    // No exceptions, no fallbacks, no conditional logic
+    if (notification.type === "MESSAGE" || notification.type === "NEW_MESSAGE") {
+      if (user?.role === 'PROVIDER') {
+        navigate("/provider/messages");
+        return;
+      } else {
+        navigate("/customer/messages");
+        return;
+      }
+    }
+    
+    // For other notification types, use the link field
+    const redirectUrl = notification.link || (user?.role === 'PROVIDER' ? '/provider/home' : '/');
     navigate(redirectUrl);
   };
 
