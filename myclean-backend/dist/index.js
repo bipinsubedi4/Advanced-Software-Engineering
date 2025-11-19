@@ -22,7 +22,6 @@ const verification_1 = __importDefault(require("./verification"));
 const recurringJobs_1 = __importDefault(require("./recurringJobs"));
 const availability_1 = __importDefault(require("./availability"));
 const recurringJobProcessor_1 = require("./cron/recurringJobProcessor");
-const emailService_1 = require("./email/emailService");
 const middleware_1 = require("./middleware");
 const socket_1 = require("./socket");
 const admin_1 = __importDefault(require("./admin"));
@@ -31,7 +30,6 @@ const httpServer = (0, http_1.createServer)(app);
 // Initialize Socket.IO
 const io = (0, socket_1.initializeSocket)(httpServer);
 console.log("🔌 Socket.IO initialized");
-app.use((0, helmet_1.default)());
 // CORS configuration - accept multiple origins
 const allowedOrigins = [
     "http://localhost:3000",
@@ -44,7 +42,7 @@ const isVercelDomain = (origin) => {
         return false;
     return origin.includes(".vercel.app") || allowedOrigins.includes(origin);
 };
-app.use("/api/services", servicesRoute_1.default);
+// CORS must be configured BEFORE other middleware
 app.use((0, cors_1.default)({
     origin: (origin, callback) => {
         // Allow requests with no origin (like mobile apps or Postman)
@@ -61,7 +59,15 @@ app.use((0, cors_1.default)({
         return callback(new Error(`Not allowed by CORS: ${origin}`));
     },
     credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
 }));
+// Configure helmet to not interfere with CORS
+app.use((0, helmet_1.default)({
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+    crossOriginEmbedderPolicy: false,
+}));
+app.use("/api/services", servicesRoute_1.default);
 app.use(express_1.default.json());
 app.get("/api/health", (_req, res) => res.json({ ok: true }));
 app.use("/api/auth", auth_1.default);
@@ -214,7 +220,6 @@ app.post("/api/messages", async (req, res) => {
     }
 });
 (0, recurringJobProcessor_1.startRecurringJobProcessor)();
-(0, emailService_1.startEmailQueueWorker)();
 const port = Number(process.env.PORT || 4000);
 httpServer.listen(port, "0.0.0.0", () => {
     console.log(`🚀 MyClean Backend API running on port ${port}`);

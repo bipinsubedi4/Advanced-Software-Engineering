@@ -3,7 +3,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const prisma_1 = require("./prisma");
 const zod_1 = require("zod");
-const emailService_1 = require("./email/emailService");
 const router = (0, express_1.Router)();
 const paramsSchema = zod_1.z.object({
     jobId: zod_1.z.string().regex(/^\d+$/).transform((val) => Number(val)),
@@ -68,15 +67,6 @@ router.post("/:jobId/accept", async (req, res) => {
                 link: "/my-bookings",
             },
         });
-        const emailContext = (0, emailService_1.buildBookingEmailContextFromModel)(updated);
-        (0, emailService_1.scheduleBookingReminderEmails)(emailContext).catch((error) => {
-            console.error("Failed to schedule reminders for job acceptance", error);
-        });
-        if (updated.totalPrice > 0 && updated.paymentStatus !== "PAID") {
-            (0, emailService_1.queuePaymentReminderEmail)(emailContext).catch((error) => {
-                console.error("Failed to queue payment reminder for job acceptance", error);
-            });
-        }
         res.json({ success: true, job: serializeJob(updated) });
     }
     catch (error) {

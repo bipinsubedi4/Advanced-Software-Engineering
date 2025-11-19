@@ -1,13 +1,6 @@
 import { Router } from "express";
 import { prisma } from "./prisma";
 import { z } from "zod";
-import {
-  buildBookingEmailContextFromModel,
-  queueBookingReceiptEmail,
-  queuePaymentReceivedEmail,
-  scheduleBookingReminderEmails,
-} from "./email/emailService";
-
 const router = Router();
 
 const mockPaymentSchema = z.object({
@@ -66,29 +59,6 @@ router.post("/mock/checkout", async (req, res) => {
           message: `${booking.customer?.name ?? "Your client"} completed payment for ${booking.service?.serviceName ?? "a booking"}.`,
           link: "/provider/dashboard",
         },
-      });
-    }
-
-    const emailContext = buildBookingEmailContextFromModel(updatedBooking);
-
-    queuePaymentReceivedEmail(emailContext, updatedBooking.paymentIntentId).catch((error) => {
-      console.error("Failed to queue payment received email", error);
-    });
-
-    queueBookingReceiptEmail(emailContext, {
-      reference: updatedBooking.paymentIntentId,
-      method: payload.paymentMethod
-        ? payload.last4
-          ? `${payload.paymentMethod} ••••${payload.last4}`
-          : payload.paymentMethod
-        : undefined,
-    }).catch((error) => {
-      console.error("Failed to queue booking receipt email", error);
-    });
-
-    if (updatedBooking.status === "ACCEPTED") {
-      scheduleBookingReminderEmails(emailContext).catch((error) => {
-        console.error("Failed to schedule reminders after payment", error);
       });
     }
 

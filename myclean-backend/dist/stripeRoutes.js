@@ -3,7 +3,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const prisma_1 = require("./prisma");
 const zod_1 = require("zod");
-const emailService_1 = require("./email/emailService");
 const router = (0, express_1.Router)();
 const mockPaymentSchema = zod_1.z.object({
     bookingId: zod_1.z.number(),
@@ -54,25 +53,6 @@ router.post("/mock/checkout", async (req, res) => {
                     message: `${booking.customer?.name ?? "Your client"} completed payment for ${booking.service?.serviceName ?? "a booking"}.`,
                     link: "/provider/dashboard",
                 },
-            });
-        }
-        const emailContext = (0, emailService_1.buildBookingEmailContextFromModel)(updatedBooking);
-        (0, emailService_1.queuePaymentReceivedEmail)(emailContext, updatedBooking.paymentIntentId).catch((error) => {
-            console.error("Failed to queue payment received email", error);
-        });
-        (0, emailService_1.queueBookingReceiptEmail)(emailContext, {
-            reference: updatedBooking.paymentIntentId,
-            method: payload.paymentMethod
-                ? payload.last4
-                    ? `${payload.paymentMethod} ••••${payload.last4}`
-                    : payload.paymentMethod
-                : undefined,
-        }).catch((error) => {
-            console.error("Failed to queue booking receipt email", error);
-        });
-        if (updatedBooking.status === "ACCEPTED") {
-            (0, emailService_1.scheduleBookingReminderEmails)(emailContext).catch((error) => {
-                console.error("Failed to schedule reminders after payment", error);
             });
         }
         res.json({ success: true, paymentStatus: "PAID", booking: { id: updatedBooking.id, status: updatedBooking.status } });

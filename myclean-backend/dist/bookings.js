@@ -3,7 +3,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const prisma_1 = require("./prisma");
 const zod_1 = require("zod");
-const emailService_1 = require("./email/emailService");
 const router = (0, express_1.Router)();
 // Validation schemas
 const createBookingSchema = zod_1.z.object({
@@ -68,10 +67,6 @@ router.post("/", async (req, res) => {
                 },
                 service: true,
             },
-        });
-        const emailContext = (0, emailService_1.buildBookingEmailContextFromModel)(booking);
-        (0, emailService_1.queueBookingConfirmationEmails)(emailContext, booking.status).catch((error) => {
-            console.error("Failed to queue booking confirmation emails", error);
         });
         // Create notification for provider
         await prisma_1.prisma.notification.create({
@@ -286,7 +281,6 @@ router.patch("/:id/status", async (req, res) => {
                 return res.status(400).json({ error: "Payment already completed. Please issue a refund before cancelling." });
             }
         }
-        const bookingEmailContext = (0, emailService_1.buildBookingEmailContextFromModel)(booking);
         // Update booking
         const updatedBooking = await prisma_1.prisma.booking.update({
             where: { id: parseInt(id) },
@@ -313,13 +307,7 @@ router.patch("/:id/status", async (req, res) => {
                         link: `/payment?bookingId=${booking.id}`,
                     },
                 });
-                (0, emailService_1.queuePaymentReminderEmail)(bookingEmailContext).catch((error) => {
-                    console.error("Failed to queue payment reminder email", error);
-                });
             }
-            (0, emailService_1.scheduleBookingReminderEmails)(bookingEmailContext).catch((error) => {
-                console.error("Failed to schedule booking reminders", error);
-            });
         }
         else if (status === "DECLINED") {
             await prisma_1.prisma.notification.create({

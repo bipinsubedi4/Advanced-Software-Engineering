@@ -2,6 +2,7 @@ import type { Request, Response, NextFunction } from "express";
 export interface AuthUser {
     sub: number;
     role: string;
+    email?: string;
 }
 export interface AuthRequest extends Request {
     user?: AuthUser;

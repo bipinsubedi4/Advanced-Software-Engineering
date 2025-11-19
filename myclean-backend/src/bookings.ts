@@ -1,14 +1,6 @@
 import { Router, Request, Response } from "express";
 import { prisma } from "./prisma";
 import { z } from "zod";
-import {
-  buildBookingEmailContextFromModel,
-  queueBookingConfirmationEmails,
-  queuePaymentReminderEmail,
-  scheduleBookingReminderEmails,
-  type BookingWithRelations,
-} from "./email/emailService";
-
 const router = Router();
 
 // Validation schemas
@@ -80,11 +72,6 @@ router.post("/", async (req: Request, res: Response) => {
         },
         service: true,
       },
-    });
-
-    const emailContext = buildBookingEmailContextFromModel(booking as BookingWithRelations);
-    queueBookingConfirmationEmails(emailContext, booking.status).catch((error) => {
-      console.error("Failed to queue booking confirmation emails", error);
     });
 
     // Create notification for provider
@@ -314,8 +301,6 @@ router.patch("/:id/status", async (req: Request, res: Response) => {
       }
     }
 
-    const bookingEmailContext = buildBookingEmailContextFromModel(booking as BookingWithRelations);
-
     // Update booking
     const updatedBooking = await prisma.booking.update({
       where: { id: parseInt(id) },
@@ -344,19 +329,7 @@ router.patch("/:id/status", async (req: Request, res: Response) => {
             link: `/payment?bookingId=${booking.id}`,
           },
         });
-
-        queuePaymentReminderEmail(bookingEmailContext).catch((error) => {
-          console.error("Failed to queue payment reminder email", error);
-        });
       }
-
-      scheduleBookingReminderEmails(bookingEmailContext).catch((error) => {
-        console.error("Failed to schedule booking reminders", error);
-      });
-
-      queueBookingConfirmationEmails(bookingEmailContext, updatedBooking.status).catch((error) => {
-        console.error("Failed to queue booking confirmation emails for accepted booking", error);
-      });
     } else if (status === "DECLINED") {
       await prisma.notification.create({
         data: {

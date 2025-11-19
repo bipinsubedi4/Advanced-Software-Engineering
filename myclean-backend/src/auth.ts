@@ -3,8 +3,6 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { z } from "zod";
 import { prisma } from "./prisma";
-import { queueWelcomeEmail } from "./email/emailService";
-
 const router = Router();
 const JWT_SECRET = process.env.JWT_SECRET || "dev-secret";
 
@@ -74,12 +72,6 @@ router.post("/register", async (req, res) => {
         await createProviderProfileSkeleton(updatedUser.id);
       }
 
-      try {
-        await queueWelcomeEmail({ email: updatedUser.email, name: updatedUser.name, role: updatedUser.role });
-      } catch (emailError) {
-        console.error("Failed to queue welcome email", emailError);
-      }
-
       const upgradeToken = jwt.sign({ sub: updatedUser.id, role: updatedUser.role }, JWT_SECRET, {
         expiresIn: "7d",
       });
@@ -110,14 +102,6 @@ router.post("/register", async (req, res) => {
 
   if (user.role === "PROVIDER") {
     await createProviderProfileSkeleton(user.id);
-  }
-
-
-  // Issue token on successful registration
-  try {
-    await queueWelcomeEmail({ email: user.email, name: user.name, role: user.role });
-  } catch (emailError) {
-    console.error("Failed to queue welcome email", emailError);
   }
 
   const token = jwt.sign({ sub: user.id, role: user.role }, JWT_SECRET, {
