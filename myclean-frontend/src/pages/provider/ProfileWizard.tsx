@@ -208,7 +208,7 @@ const ProfileWizard: React.FC = () => {
         headers: { Authorization: `Bearer ${token}` },
       });
       await refetch();
-      navigate("/provider/dashboard", { replace: true });
+      navigate("/provider/home", { replace: true });
     } catch (err: any) {
       console.error("Profile completion failed", err);
       setError(err?.response?.data?.error ?? "Unable to save profile");
