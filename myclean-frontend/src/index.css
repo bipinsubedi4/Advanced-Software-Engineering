@@ -15,3 +15,56 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
 }
+
+/* Gradient Logo Style */
+.gradient-logo {
+  background: linear-gradient(to right, #5046E5, #EA489A);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}
+
+/* Gradient Border Menu Item */
+.gradient-menu-item {
+  position: relative;
+  border-radius: 9999px;
+  transition: all 0.2s ease;
+  border: 2px solid transparent;
+}
+
+.gradient-menu-item::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: 9999px;
+  padding: 2px;
+  background: linear-gradient(to right, #5046E5, #EA489A);
+  -webkit-mask: 
+    linear-gradient(#fff 0 0) content-box, 
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask: 
+    linear-gradient(#fff 0 0) content-box, 
+    linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  pointer-events: none;
+  z-index: -1;
+}
+
+.gradient-menu-item:hover::before {
+  opacity: 1;
+}
+
+.gradient-menu-item.active {
+  background: linear-gradient(to right, #5046E5, #EA489A);
+  color: white;
+  font-weight: bold;
+  border: 2px solid transparent;
+}
+
+.gradient-menu-item.active::before {
+  display: none;
+}

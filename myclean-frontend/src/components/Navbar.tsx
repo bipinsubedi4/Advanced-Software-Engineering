@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useProviderProfile } from '../hooks/useProviderProfile';
 import { useSocket } from '../context/SocketContext';
@@ -21,6 +21,7 @@ const Navbar: React.FC = () => {
   const { profileComplete } = useProviderProfile();
   const { socket } = useSocket();
   const navigate = useNavigate();
+  const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -107,13 +108,35 @@ const Navbar: React.FC = () => {
     return '/';
   };
 
+  // Check if a route is active
+  const isActiveRoute = (path: string) => {
+    return location.pathname === path || location.pathname.startsWith(path + '/');
+  };
+
+  // Menu item class with gradient border
+  const getMenuItemClass = (path: string, isMobile = false) => {
+    const baseClass = isMobile 
+      ? "gradient-menu-item block px-4 py-2 text-base font-medium"
+      : "gradient-menu-item px-4 py-2 text-sm font-medium";
+    
+    const isActive = isActiveRoute(path);
+    
+    if (isActive) {
+      return `${baseClass} active`;
+    }
+    
+    return `${baseClass} text-gray-700 hover:text-gray-900 hover:bg-gradient-to-r hover:from-[#5046E5]/10 hover:to-[#EA489A]/10`;
+  };
+
   return (
     <nav className="bg-white shadow-md">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
           <div className="flex items-center">
             <Link to={getHomeRoute()} className="flex-shrink-0 flex items-center">
-              <span className="text-2xl font-bold text-blue-600">MyClean</span>
+              <span className="text-2xl font-bold gradient-logo">
+                MyClean
+              </span>
             </Link>
           </div>
 
@@ -123,18 +146,18 @@ const Navbar: React.FC = () => {
               <>
                 {user.role === 'CUSTOMER' && (
                   <>
-                    <Link to="/search" className="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium">
+                    <Link to="/search" className={getMenuItemClass("/search")}>
                       Find Cleaners
                     </Link>
-                    <Link to="/marketplace" className="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium">
+                    <Link to="/marketplace" className={getMenuItemClass("/marketplace")}>
                       Marketplace
                     </Link>
-                    <Link to="/my-bookings" className="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium">
+                    <Link to="/my-bookings" className={getMenuItemClass("/my-bookings")}>
                       My Bookings
                     </Link>
                     <Link
                       to="/customer/messages"
-                      className="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium"
+                      className={getMenuItemClass("/customer/messages")}
                     >
                       Messages
                     </Link>
@@ -142,25 +165,25 @@ const Navbar: React.FC = () => {
                 )}
                 {user.role === 'PROVIDER' && (
                   <>
-                    <Link to="/provider/home" className="text-gray-700 hover:text-indigo-600 px-3 py-2 rounded-md text-sm font-medium">
+                    <Link to="/provider/home" className={getMenuItemClass("/provider/home")}>
                       Home
                     </Link>
-                    <Link to="/provider/dashboard" className="text-gray-700 hover:text-indigo-600 px-3 py-2 rounded-md text-sm font-medium flex items-center">
+                    <Link to="/provider/dashboard" className={`${getMenuItemClass("/provider/dashboard")} flex items-center`}>
                       <FaChartBar className="mr-2" /> Dashboard
                     </Link>
-                    <Link to="/provider/calendar" className="text-gray-700 hover:text-indigo-600 px-3 py-2 rounded-md text-sm font-medium flex items-center">
+                    <Link to="/provider/calendar" className={`${getMenuItemClass("/provider/calendar")} flex items-center`}>
                       <FaCalendar className="mr-2" /> Calendar
                     </Link>
-                    <Link to="/provider/messages" className="text-gray-700 hover:text-indigo-600 px-3 py-2 rounded-md text-sm font-medium">
+                    <Link to="/provider/messages" className={getMenuItemClass("/provider/messages")}>
                       Messages
                     </Link>
-                    <Link to="/provider/marketplace" className="text-gray-700 hover:text-indigo-600 px-3 py-2 rounded-md text-sm font-medium">
+                    <Link to="/provider/marketplace" className={getMenuItemClass("/provider/marketplace")}>
                       Marketplace
                     </Link>
                   </>
                 )}
                 {user.role === 'ADMIN' && (
-                  <Link to="/admin" className="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium">
+                  <Link to="/admin" className={getMenuItemClass("/admin")}>
                     Admin Panel
                   </Link>
                 )}
@@ -224,13 +247,13 @@ const Navbar: React.FC = () => {
                 {user.role === 'PROVIDER' ? (
                   <Link 
                     to={profileComplete ? "/provider/profile" : "/provider/profile-setup"} 
-                    className="text-gray-700 hover:text-indigo-600 px-3 py-2 rounded-md text-sm font-medium flex items-center"
-                      title={profileComplete ? "View Profile" : "Complete Profile"}
-                    >
-                      <FaUser className="mr-2" /> {user.name}
-                    </Link>
+                    className={`${getMenuItemClass(profileComplete ? "/provider/profile" : "/provider/profile-setup")} flex items-center`}
+                    title={profileComplete ? "View Profile" : "Complete Profile"}
+                  >
+                    <FaUser className="mr-2" /> {user.name}
+                  </Link>
                   ) : (
-                    <span className="text-gray-700 px-3 py-2 rounded-md text-sm font-medium flex items-center">
+                    <span className="px-4 py-2 rounded-full text-sm font-medium flex items-center text-gray-700 border-2 border-transparent">
                       <FaUser className="mr-2" /> {user.name}
                     </span>
                   )}
@@ -274,18 +297,18 @@ const Navbar: React.FC = () => {
               <>
                 {user.role === 'CUSTOMER' && (
                   <>
-                    <Link to="/search" className="block text-gray-700 hover:bg-blue-50 px-3 py-2 rounded-md text-base font-medium">
+                    <Link to="/search" className={getMenuItemClass("/search", true)}>
                       Find Cleaners
                     </Link>
-                    <Link to="/marketplace" className="block text-gray-700 hover:bg-blue-50 px-3 py-2 rounded-md text-base font-medium">
+                    <Link to="/marketplace" className={getMenuItemClass("/marketplace", true)}>
                       Marketplace
                     </Link>
-                    <Link to="/my-bookings" className="block text-gray-700 hover:bg-blue-50 px-3 py-2 rounded-md text-base font-medium">
+                    <Link to="/my-bookings" className={getMenuItemClass("/my-bookings", true)}>
                       My Bookings
                     </Link>
                     <Link
                       to="/customer/messages"
-                      className="block text-gray-700 hover:bg-blue-50 px-3 py-2 rounded-md text-base font-medium"
+                      className={getMenuItemClass("/customer/messages", true)}
                     >
                       Messages
                     </Link>
@@ -293,19 +316,19 @@ const Navbar: React.FC = () => {
                 )}
                 {user.role === 'PROVIDER' && (
                   <>
-                    <Link to="/provider/home" className="block text-gray-700 hover:bg-blue-50 px-3 py-2 rounded-md text-base font-medium">
+                    <Link to="/provider/home" className={getMenuItemClass("/provider/home", true)}>
                       Home
                     </Link>
-                    <Link to="/provider/dashboard" className="block text-gray-700 hover:bg-blue-50 px-3 py-2 rounded-md text-base font-medium">
+                    <Link to="/provider/dashboard" className={getMenuItemClass("/provider/dashboard", true)}>
                       Dashboard
                     </Link>
-                    <Link to="/provider/calendar" className="block text-gray-700 hover:bg-blue-50 px-3 py-2 rounded-md text-base font-medium">
+                    <Link to="/provider/calendar" className={getMenuItemClass("/provider/calendar", true)}>
                       Calendar
                     </Link>
-                    <Link to="/provider/messages" className="block text-gray-700 hover:bg-blue-50 px-3 py-2 rounded-md text-base font-medium">
+                    <Link to="/provider/messages" className={getMenuItemClass("/provider/messages", true)}>
                       Messages
                     </Link>
-                    <Link to="/provider/marketplace" className="block text-gray-700 hover:bg-blue-50 px-3 py-2 rounded-md text-base font-medium">
+                    <Link to="/provider/marketplace" className={getMenuItemClass("/provider/marketplace", true)}>
                       Marketplace
                     </Link>
                   </>
@@ -313,7 +336,7 @@ const Navbar: React.FC = () => {
                 {user.role === 'PROVIDER' && (
                   <Link 
                     to={profileComplete ? "/provider/profile" : "/provider/profile-setup"} 
-                    className="block text-gray-700 hover:bg-blue-50 px-3 py-2 rounded-md text-base font-medium"
+                    className={getMenuItemClass(profileComplete ? "/provider/profile" : "/provider/profile-setup", true)}
                   >
                     {profileComplete ? "My Profile" : "Complete Profile"}
                   </Link>
