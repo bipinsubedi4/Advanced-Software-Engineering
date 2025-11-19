@@ -81,7 +81,7 @@ router.post("/", async (req: Request, res: Response) => {
         type: "BOOKING_REQUEST",
         title: "New Booking Request",
         message: `${booking.customer.name} has requested ${service.serviceName} for ${data.bookingDate}`,
-        link: "/provider/dashboard",
+        link: `/provider/messages?bookingId=${booking.id}`,
       },
     });
 
@@ -344,13 +344,18 @@ router.patch("/:id/status", async (req: Request, res: Response) => {
       const notifyUserId = userId === booking.customerId ? booking.providerId : booking.customerId;
       const notifyName = userId === booking.customerId ? booking.customer.name : booking.provider.name;
       
+      // Determine redirect URL based on who is being notified
+      const redirectUrl = userId === booking.customerId 
+        ? `/provider/messages?bookingId=${booking.id}`  // Provider gets message link
+        : "/my-bookings";  // Customer gets bookings page
+      
       await prisma.notification.create({
         data: {
           userId: notifyUserId,
           type: "BOOKING_CANCELLED",
           title: "Booking Cancelled",
           message: `${notifyName} has cancelled the booking for ${booking.service.serviceName}`,
-          link: userId === booking.customerId ? "/provider/dashboard" : "/my-bookings",
+          link: redirectUrl,
         },
       });
     }

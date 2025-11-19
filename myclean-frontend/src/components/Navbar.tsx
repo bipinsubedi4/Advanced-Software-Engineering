@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useProviderProfile } from '../hooks/useProviderProfile';
+import { useSocket } from '../context/SocketContext';
 import { FaBars, FaTimes, FaUser, FaCalendar, FaChartBar, FaSignOutAlt, FaBell } from 'react-icons/fa';
 import axios from 'axios';
 
@@ -18,6 +19,7 @@ interface Notification {
 const Navbar: React.FC = () => {
   const { user, logout } = useAuth();
   const { profileComplete } = useProviderProfile();
+  const { socket } = useSocket();
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
@@ -46,6 +48,22 @@ const Navbar: React.FC = () => {
     }
   }, [user, fetchNotifications]);
 
+  // Listen for socket notifications
+  useEffect(() => {
+    if (!socket || !user) return;
+
+    const handleNewMessageNotification = () => {
+      // Refresh notifications when a new message notification arrives
+      fetchNotifications();
+    };
+
+    socket.on('new_message_notification', handleNewMessageNotification);
+
+    return () => {
+      socket.off('new_message_notification', handleNewMessageNotification);
+    };
+  }, [socket, user, fetchNotifications]);
+
   const markAsRead = async (notificationId: number) => {
     try {
       await axios.patch(`/api/notifications/${notificationId}/read`);
@@ -58,7 +76,9 @@ const Navbar: React.FC = () => {
   const handleNotificationClick = (notification: Notification) => {
     markAsRead(notification.id);
     setShowNotifications(false);
-    navigate(notification.link);
+    // Use the link field from notification (which now contains proper redirect URLs)
+    const redirectUrl = notification.link || (user?.role === 'PROVIDER' ? '/provider/messages' : '/customer/messages');
+    navigate(redirectUrl);
   };
 
   const handleLogout = () => {

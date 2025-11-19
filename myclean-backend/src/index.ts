@@ -235,14 +235,24 @@ app.post("/api/messages", async (req: Request, res: Response) => {
       receiver: messageRecord.receiver,
     };
 
-    // Create notification for receiver
+    // Determine receiver role to set correct redirect URL
+    const receiver = await prisma.user.findUnique({
+      where: { id: receiverId },
+      select: { role: true },
+    });
+
+    // Create notification for receiver with proper redirect URL
+    const redirectUrl = receiver?.role === 'PROVIDER' 
+      ? `/provider/messages?bookingId=${bookingId}`
+      : `/customer/messages?bookingId=${bookingId}`;
+
     await prisma.notification.create({
       data: {
         userId: receiverId,
         type: "NEW_MESSAGE",
         title: "New Message",
         message: `${messageRecord.sender.name} sent you a message`,
-        link: `/my-bookings`,
+        link: redirectUrl,
       },
     });
 

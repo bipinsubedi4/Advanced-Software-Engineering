@@ -104,12 +104,34 @@ export function initializeSocket(httpServer: HTTPServer) {
           sender: message.sender,
         });
 
+        // Determine receiver role to set correct redirect URL
+        const receiver = await prisma.user.findUnique({
+          where: { id: data.receiverId },
+          select: { role: true },
+        });
+
+        const redirectUrl = receiver?.role === 'PROVIDER' 
+          ? `/provider/messages?bookingId=${data.bookingId}`
+          : `/customer/messages?bookingId=${data.bookingId}`;
+
+        // Create database notification for receiver
+        await prisma.notification.create({
+          data: {
+            userId: data.receiverId,
+            type: "NEW_MESSAGE",
+            title: "New Message",
+            message: `${message.sender.name} sent you a message`,
+            link: redirectUrl,
+          },
+        });
+
         // Send notification to receiver if they're online
         const receiverSocketId = onlineUsers.get(data.receiverId);
         if (receiverSocketId) {
           io.to(receiverSocketId).emit("new_message_notification", {
             bookingId: data.bookingId,
             from: message.sender.name,
+            redirectUrl: redirectUrl,
           });
         }
 
