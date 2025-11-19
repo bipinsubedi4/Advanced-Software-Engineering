@@ -7,6 +7,7 @@ const Login: React.FC = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [accountType, setAccountType] = useState<'CUSTOMER' | 'PROVIDER'>('CUSTOMER');
   const { login } = useAuth();
   const navigate = useNavigate();
 
@@ -16,7 +17,7 @@ const Login: React.FC = () => {
     setLoading(true);
 
     try {
-      await login(email, password);
+      await login(email, password, accountType);
       navigate('/dashboard');
     } catch (err: any) {
       setError(err.response?.data?.error || 'Login failed. Please try again.');
@@ -74,6 +75,33 @@ const Login: React.FC = () => {
                 className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 rounded-lg placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="Enter your password"
               />
+            </div>
+            <div>
+              <span className="block text-sm font-medium text-gray-700 mb-2">Sign in as</span>
+              <div className="flex gap-4">
+                <label className="flex items-center space-x-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="accountType"
+                    value="CUSTOMER"
+                    checked={accountType === 'CUSTOMER'}
+                    onChange={() => setAccountType('CUSTOMER')}
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500"
+                  />
+                  <span className="text-gray-900">Customer</span>
+                </label>
+                <label className="flex items-center space-x-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="accountType"
+                    value="PROVIDER"
+                    checked={accountType === 'PROVIDER'}
+                    onChange={() => setAccountType('PROVIDER')}
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500"
+                  />
+                  <span className="text-gray-900">Provider</span>
+                </label>
+              </div>
             </div>
           </div>
 
