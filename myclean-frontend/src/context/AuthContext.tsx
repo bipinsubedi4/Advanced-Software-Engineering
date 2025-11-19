@@ -16,7 +16,7 @@ interface AuthContextType {
   user: User | null;
   token: string | null;
   loading: boolean;
-  login: (email: string, password: string, accountType?: Role) => Promise<void>;
+  login: (email: string, password: string) => Promise<void>;
   register: (name: string, email: string, password: string, role: Role) => Promise<void>;
   logout: () => void;
   // handy helpers
@@ -79,9 +79,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return new Error((err as Error)?.message || 'Request failed');
   }, []);
 
-  const login = useCallback(async (email: string, password: string, accountType: Role = 'CUSTOMER') => {
+  const login = useCallback(async (email: string, password: string) => {
     try {
-      const res = await api.post('/api/auth/login', { email, password, accountType });
+      const res = await api.post('/api/auth/login', { email, password });
       const { token: newToken, user: newUser } = res.data as { token: string; user: User };
 
       setToken(newToken);
@@ -108,7 +108,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       // Fallback: attempt to login for flows that still expect it
-      await login(email, password, role);
+      await login(email, password);
     } catch (e) {
       throw normalizeError(e);
     }
@@ -123,7 +123,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const isProvider = user?.role === 'PROVIDER';
-  const isCustomer = user?.role === 'CUSTOMER';
+  const isCustomer = user?.role === 'CUSTOMER' || user?.role === 'PROVIDER';
   const isAdmin = user?.role === 'ADMIN';
 
   const value = useMemo<AuthContextType>(

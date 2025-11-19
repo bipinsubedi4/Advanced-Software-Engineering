@@ -47,82 +47,72 @@ router.post("/register", async (req, res) => {
     if (!parsed.success)
         return res.status(400).json(parsed.error.format());
     const { name, email, password, role } = parsed.data;
-    const accountType = role;
     // Check if user already exists
     const existing = await prisma_1.prisma.user.findUnique({
         where: { email },
         include: { providerProfile: true },
     });
     if (existing) {
+        if (existing.role === role) {
+            return res.status(409).json({ error: "Email already in use" });
+        }
         const passwordMatches = await bcryptjs_1.default.compare(password, existing.passwordHash);
         if (!passwordMatches) {
             return res.status(409).json({ error: "Email already in use" });
         }
-        if (accountType === "ADMIN") {
-            return res.status(403).json({ error: "Cannot create another admin with this email" });
+        if (role === "PROVIDER" && existing.role === "CUSTOMER") {
+            const updatedUser = await prisma_1.prisma.user.update({
+                where: { id: existing.id },
+                data: { role: "PROVIDER" },
+            });
+            if (!existing.providerProfile) {
+                await createProviderProfileSkeleton(updatedUser.id);
+            }
+            const upgradeToken = jsonwebtoken_1.default.sign({ sub: updatedUser.id, role: updatedUser.role }, JWT_SECRET, {
+                expiresIn: "7d",
+            });
+            return res.status(200).json({
+                token: upgradeToken,
+                user: { id: updatedUser.id, email: updatedUser.email, name: updatedUser.name, role: updatedUser.role },
+                message: "Account upgraded to provider using your existing email.",
+            });
         }
-        if (accountType === "CUSTOMER" && existing.hasCustomerAccount) {
-            return res.status(409).json({ error: "This email already has a customer account" });
-        }
-        if (accountType === "PROVIDER" && existing.hasProviderAccount) {
-            return res.status(409).json({ error: "This email already has a provider account" });
-        }
-        const updatedUser = await prisma_1.prisma.user.update({
-            where: { id: existing.id },
-            data: {
-                hasCustomerAccount: accountType === "CUSTOMER" ? true : undefined,
-                hasProviderAccount: accountType === "PROVIDER" ? true : undefined,
-                role: accountType === "PROVIDER" ? "PROVIDER" : existing.role,
-            },
-        });
-        if (accountType === "PROVIDER" && !existing.providerProfile) {
-            await createProviderProfileSkeleton(existing.id);
-        }
-        const upgradeToken = jsonwebtoken_1.default.sign({ sub: updatedUser.id, role: accountType }, JWT_SECRET, {
+        const existingToken = jsonwebtoken_1.default.sign({ sub: existing.id, role: existing.role }, JWT_SECRET, {
             expiresIn: "7d",
         });
         return res.status(200).json({
-            token: upgradeToken,
-            user: { id: updatedUser.id, email: updatedUser.email, name: updatedUser.name, role: accountType },
-            message: "Account type added to your profile.",
+            token: existingToken,
+            user: { id: existing.id, email: existing.email, name: existing.name, role: existing.role },
+            message: "Account already exists. Logged you in instead.",
         });
     }
     // Hash password and create user
     const passwordHash = await bcryptjs_1.default.hash(password, 10);
     const user = await prisma_1.prisma.user.create({
-        data: {
-            name,
-            email,
-            passwordHash,
-            role: accountType,
-            hasCustomerAccount: accountType === "CUSTOMER",
-            hasProviderAccount: accountType === "PROVIDER",
-        },
+        data: { name, email, passwordHash, role },
     });
-    if (accountType === "PROVIDER") {
+    if (user.role === "PROVIDER") {
         await createProviderProfileSkeleton(user.id);
     }
-    const token = jsonwebtoken_1.default.sign({ sub: user.id, role: accountType }, JWT_SECRET, {
+    const token = jsonwebtoken_1.default.sign({ sub: user.id, role: user.role }, JWT_SECRET, {
         expiresIn: "7d",
     });
     return res.status(201).json({
         token,
-        user: { id: user.id, email: user.email, name: user.name, role: accountType },
+        user: { id: user.id, email: user.email, name: user.name, role: user.role },
     });
 });
 // Schema for login credentials
 const loginSchema = zod_1.z.object({
     email: zod_1.z.string().email(),
     password: zod_1.z.string().min(6),
-    accountType: zod_1.z.enum(["CUSTOMER", "PROVIDER", "ADMIN"]).optional(),
 });
 // Login Route
 router.post("/login", async (req, res) => {
     const parsed = loginSchema.safeParse(req.body);
     if (!parsed.success)
         return res.status(400).json(parsed.error.format());
-    const { email, password, accountType } = parsed.data;
-    const requestedRole = accountType ?? "CUSTOMER";
+    const { email, password } = parsed.data;
     const user = await prisma_1.prisma.user.findUnique({ where: { email } });
     if (!user)
         return res.status(401).json({ error: "Invalid credentials" });
@@ -132,27 +122,12 @@ router.post("/login", async (req, res) => {
     const ok = await bcryptjs_1.default.compare(password, user.passwordHash);
     if (!ok)
         return res.status(401).json({ error: "Invalid credentials" });
-    if (requestedRole === "ADMIN") {
-        if (user.role !== "ADMIN") {
-            return res.status(403).json({ error: "You do not have admin access" });
-        }
-    }
-    else if (requestedRole === "CUSTOMER") {
-        if (!user.hasCustomerAccount) {
-            return res.status(403).json({ error: "No customer account associated with this email" });
-        }
-    }
-    else if (requestedRole === "PROVIDER") {
-        if (!user.hasProviderAccount) {
-            return res.status(403).json({ error: "No provider account associated with this email" });
-        }
-    }
-    const token = jsonwebtoken_1.default.sign({ sub: user.id, role: requestedRole }, JWT_SECRET, {
+    const token = jsonwebtoken_1.default.sign({ sub: user.id, role: user.role }, JWT_SECRET, {
         expiresIn: "7d",
     });
     res.json({
         token,
-        user: { id: user.id, name: user.name, email: user.email, role: requestedRole },
+        user: { id: user.id, name: user.name, email: user.email, role: user.role },
     });
 });
 exports.default = router;
