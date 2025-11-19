@@ -61,7 +61,7 @@ const dedupeServices = (services: WizardServiceSelection[]): WizardServiceSelect
 
 const ProfileWizard: React.FC = () => {
   const { user, token } = useAuth();
-  const { profile, profileComplete, loading: profileLoading, refetch } = useProviderProfile();
+  const { profile, profileComplete, loading: profileLoading, refetch, markProfileComplete } = useProviderProfile();
 
   const [formData, setFormData] = useState<ProfileWizardState>(initialState);
   const [currentStep, setCurrentStep] = useState(0);
@@ -206,12 +206,15 @@ const ProfileWizard: React.FC = () => {
       await axios.put(`${API_BASE}/api/cleaners/me/profile`, preparePayload(), {
         headers: { Authorization: `Bearer ${token}` },
       });
-      await refetch();
+      markProfileComplete(true);
       const message = "Profile completed! Redirecting to your home page...";
       setSuccessMessage(message);
       setTimeout(() => {
-        window.location.href = "/provider/home";
-      }, 1500);
+        window.location.replace("/provider/home");
+      }, 1200);
+      refetch().catch((error) => {
+        console.error("Failed to refresh provider profile after completion", error);
+      });
     } catch (err: any) {
       console.error("Profile completion failed", err);
       setError(err?.response?.data?.error ?? "Unable to save profile");
