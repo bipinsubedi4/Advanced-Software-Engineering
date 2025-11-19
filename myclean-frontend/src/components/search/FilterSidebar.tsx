@@ -97,18 +97,6 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({ filters, onChange, onRese
       </div>
 
       <div>
-        <p className="text-sm font-medium text-gray-700 mb-2">Distance (km)</p>
-        <Slider
-          value={filters.radiusInKm}
-          min={5}
-          max={50}
-          step={5}
-          onChange={(value) => onChange({ radiusInKm: value as number })}
-        />
-        <p className="text-xs text-gray-500 mt-1">Within {filters.radiusInKm} km of your location.</p>
-      </div>
-
-      <div>
         <p className="text-sm font-medium text-gray-700 mb-2">Services</p>
         <div className="space-y-2">
           {availableServices.map((service) => (
