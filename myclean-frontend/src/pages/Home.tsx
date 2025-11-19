@@ -175,15 +175,6 @@ const Home: React.FC = () => {
               </p>
             </div>
           </div>
-
-          <div className="text-center">
-            <Link
-              to="/register"
-              className="bg-white text-indigo-600 px-8 py-4 rounded-lg font-semibold text-lg hover:bg-indigo-50 transition-colors inline-block"
-            >
-              Join as a Provider
-            </Link>
-          </div>
         </div>
       </div>
 
@@ -208,24 +199,6 @@ const Home: React.FC = () => {
               <p className="text-gray-600">Average Rating</p>
             </div>
           </div>
-        </div>
-      </div>
-
-      {/* CTA */}
-      <div className="py-20 bg-blue-600 text-white">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-4xl font-bold mb-4">
-            Ready to Get Started?
-          </h2>
-          <p className="text-xl mb-8 text-blue-100">
-            Join thousands of satisfied customers and providers on MyClean
-          </p>
-          <Link
-            to="/register"
-            className="bg-white text-blue-600 px-8 py-4 rounded-lg font-semibold text-lg hover:bg-blue-50 transition-colors inline-block"
-          >
-            Sign Up Now - It's Free!
-          </Link>
         </div>
       </div>
     </div>
