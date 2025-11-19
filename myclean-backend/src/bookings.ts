@@ -353,6 +353,10 @@ router.patch("/:id/status", async (req: Request, res: Response) => {
       scheduleBookingReminderEmails(bookingEmailContext).catch((error) => {
         console.error("Failed to schedule booking reminders", error);
       });
+
+      queueBookingConfirmationEmails(bookingEmailContext, updatedBooking.status).catch((error) => {
+        console.error("Failed to queue booking confirmation emails for accepted booking", error);
+      });
     } else if (status === "DECLINED") {
       await prisma.notification.create({
         data: {

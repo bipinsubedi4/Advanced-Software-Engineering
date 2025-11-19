@@ -3,6 +3,7 @@ import { prisma } from "./prisma";
 import { z } from "zod";
 import {
   buildBookingEmailContextFromModel,
+  queueBookingConfirmationEmails,
   queuePaymentReminderEmail,
   scheduleBookingReminderEmails,
   type BookingWithRelations,
@@ -88,6 +89,10 @@ router.post("/:jobId/accept", async (req, res) => {
 
     scheduleBookingReminderEmails(emailContext).catch((error) => {
       console.error("Failed to schedule reminders for job acceptance", error);
+    });
+
+    queueBookingConfirmationEmails(emailContext, updated.status).catch((error) => {
+      console.error("Failed to queue booking confirmation emails for job acceptance", error);
     });
 
     if (updated.totalPrice > 0 && updated.paymentStatus !== "PAID") {
